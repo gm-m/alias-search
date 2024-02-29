@@ -1,0 +1,37 @@
+{
+    "manifest_version": 2,
+    "name": "Alias Search",
+    "version": "0.1",
+    "permissions": [
+        "storage",
+        "declarativeContent",
+        "activeTab",
+        "scripting"
+    ],
+    "options_page": "options.html",
+    "commands": {
+        "execute-code": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+E",
+                "mac": "Command+Shift+E"
+            },
+            "description": "Toggle Ext"
+        }
+    },
+    "background": {
+        "scripts": [
+            "background.js"
+        ],
+        "persistent": false
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ]
+}
