@@ -3,7 +3,6 @@ let savedAliases = {};
 function loadSavedData() {
     chrome.storage.sync.get("aliasObj", (result) => {
         savedAliases = result.aliasObj;
-        console.log(savedAliases);
         displayData(savedAliases);
     });
 }
@@ -17,8 +16,8 @@ function addAliasToDom(aliasObj) {
     aliasDiv.style = 'display: flex; flex-direction: column; width: calc(100% / 4); gap: 10px';
 
     aliasDiv.innerHTML = `
-    <input autocomplete="off" class="name" name="${name}" value=${name} readonly>
-    <input id="alias-url" autocomplete="off" class="value" name="${url}" value=${url}>
+    <input autocomplete="off" class="name" name="${name}" value="${name}" readonly>
+    <input id="alias-url" autocomplete="off" class="value" name="${url}" value="${url}">
     <div style="display: flex; gap: 10px;">
         <button id="update-${name}" class="${name}" style="width: 50%">Update</button>
         <button id="${name}" style="width: 50%">Delete</button>
