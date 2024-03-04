@@ -118,6 +118,13 @@ function isObjectNotEmpty(obj) {
 }
 
 document.getElementById("btn-save").addEventListener("click", pushData);
+
 document.getElementById("btn-reset").addEventListener("click", clearData);
+document.getElementById("btn-export-json").addEventListener("click", () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(savedAliases)], { type: 'application/json' }));
+    a.download = 'aliases.json';
+    a.click();
+});
 
 document.addEventListener('DOMContentLoaded', loadSavedData);
