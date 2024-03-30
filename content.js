@@ -25,7 +25,7 @@ function openPopup() {
         if (!savedAliases) return;
 
         if (savedAliases.hasOwnProperty(alias)) {
-          const queryUrl = savedAliases[alias].replace('%s', searchQuery);
+          const queryUrl = savedAliases[alias].url.replace('%s', searchQuery);
           window.open(queryUrl, "_blank")
         }
       });

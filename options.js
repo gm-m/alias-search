@@ -8,7 +8,7 @@ function loadSavedData() {
 }
 
 function addAliasToDom(aliasObj) {
-    const { name, url } = aliasObj;
+    const { name, searchEngine, url } = aliasObj;
 
     const aliasDiv = document.createElement('div');
     aliasDiv.id = name;
@@ -16,6 +16,7 @@ function addAliasToDom(aliasObj) {
     aliasDiv.style = 'display: flex; flex-direction: column; width: calc(100% / 4); gap: 10px';
 
     aliasDiv.innerHTML = `
+    <input autocomplete="off" class="extended-name" name="${searchEngine}" value="${searchEngine}" readonly>
     <input autocomplete="off" class="name" name="${name}" value="${name}" readonly>
     <input id="alias-url" autocomplete="off" class="value" name="${url}" value="${url}">
     <div style="display: flex; gap: 10px;">
@@ -37,7 +38,7 @@ function updateAlias(event) {
     const [aliasInput, urlInput] = targetInput;
 
     if (!urlInput.value.includes("%s")) displayCustomError("Url must includes %s");
-    savedAliases[targetClassName] = urlInput.value;
+    savedAliases[targetClassName] = { searchEngine: aliasInput.value, url: urlInput.value };
     chrome.storage.sync.set({ "aliasObj": savedAliases }, () => { });
 }
 
@@ -65,9 +66,8 @@ function deleteAlias(event) {
 function displayData(content) {
     if (isObjectNotEmpty(content)) {
         for (const key in savedAliases) {
-            addAliasToDom({ name: key, url: savedAliases[key] });
+            addAliasToDom({ name: key, searchEngine: savedAliases[key].searchEngine, url: savedAliases[key].url });
         }
-
         showData(true);
     } else {
         showData(false);
@@ -92,7 +92,7 @@ function pushData() {
     if (!savedAliases) savedAliases = {};
     if (savedAliases.hasOwnProperty(newAlias.name)) displayCustomError("An alias with same name already exists");
 
-    savedAliases[newAlias.name] = newAlias.url;
+    savedAliases[newAlias.name] = { searchEngine: newAlias.searchEngine, url: newAlias.url };
     chrome.storage.sync.set({ "aliasObj": savedAliases }, () => {
         addAliasToDom(newAlias);
         showData(true);
