@@ -20,13 +20,13 @@ function openPopup() {
       const searchQuery = userInput.substring(alias.length).trim();
       if (!searchQuery) return;
 
-      chrome.storage.sync.get("aliasObj", (result) => {
-        const savedAliases = result.aliasObj;
-        if (!savedAliases.activeAliases) return;
+      chrome.storage.sync.get("searchEnginesObj", (result) => {
+        const searchEngines = result.searchEnginesObj;
+        if (!searchEngines.alias) return;
 
-        if (savedAliases.activeAliases.hasOwnProperty(alias)) {
-          const queryUrl = savedAliases.activeAliases[alias].url.replace('%s', searchQuery);
-          window.open(queryUrl, savedAliases.targetWindow)
+        if (searchEngines.alias.hasOwnProperty(alias)) {
+          const queryUrl = searchEngines.alias[alias].url.replace('%s', searchQuery);
+          window.open(queryUrl, searchEngines.targetWindow)
         }
       });
 

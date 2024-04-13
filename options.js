@@ -1,21 +1,21 @@
-let savedAliases = {};
+let searchEngines = {};
 
 function loadSavedData() {
-    chrome.storage.sync.get("aliasObj", (result) => {
-        savedAliases = result.aliasObj;
-        displayData(savedAliases);
+    chrome.storage.sync.get("searchEnginesObj", (result) => {
+        searchEngines = result.searchEnginesObj;
+        displayData(searchEngines);
     });
 }
 
 function saveSettings() {
-    if (!savedAliases) savedAliases = {};
-    savedAliases.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
+    if (!searchEngines) searchEngines = {};
+    searchEngines.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
 
-    chrome.storage.sync.set({ "aliasObj": savedAliases }, () => { });
+    chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => { });
 }
 
-function addAliasToDom(aliasObj) {
-    const { name, searchEngine, url } = aliasObj;
+function addAliasToDom(searchEnginesObj) {
+    const { name, searchEngine, url } = searchEnginesObj;
 
     const aliasDiv = document.createElement('div');
     aliasDiv.id = name;
@@ -45,8 +45,8 @@ function updateAlias(event) {
     const [aliasInput, urlInput] = targetInput;
 
     if (!urlInput.value.includes("%s")) displayCustomError("Url must includes %s");
-    savedAliases[targetClassName] = { searchEngine: aliasInput.value, url: urlInput.value };
-    chrome.storage.sync.set({ "aliasObj": savedAliases }, () => { });
+    searchEngines[targetClassName] = { searchEngine: aliasInput.value, url: urlInput.value };
+    chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => { });
 }
 
 function deleteAlias(event) {
@@ -63,18 +63,18 @@ function deleteAlias(event) {
         if (alias.name !== targetId) activeAliases[alias.name] = alias.value;
     })
 
-    savedAliases = activeAliases;
-    chrome.storage.sync.set({ "aliasObj": savedAliases }, () => {
+    searchEngines = activeAliases;
+    chrome.storage.sync.set({ "aliasObj": searchEngines }, () => {
         document.getElementById(targetId).remove();
-        showData(isObjectNotEmpty(savedAliases));
+        showData(hasAliases(searchEngines));
     });
 }
 
 function displayData(content) {
-    if (isObjectNotEmpty(content)) {
-        document.getElementById('tab-settings').checked = savedAliases.targetWindow === '_blank';
-        for (const key in savedAliases.activeAliases) {
-            addAliasToDom({ name: key, searchEngine: savedAliases.activeAliases[key].searchEngine, url: savedAliases.activeAliases[key].url });
+    if (hasAliases(content)) {
+        document.getElementById('tab-settings').checked = searchEngines.targetWindow === '_blank';
+        for (const key in searchEngines.alias) {
+            addAliasToDom({ name: key, searchEngine: searchEngines.alias[key].searchEngine, url: searchEngines.alias[key].url });
         }
         showData(true);
     } else {
@@ -97,12 +97,12 @@ function createNewAlias() {
 
     if (!newAlias.name || !newAlias.url) displayCustomError("Fill all data");
     if (!newAlias.url.includes("%s")) displayCustomError("Url must includes %s");
-    if (!isObjectNotEmpty(savedAliases)) savedAliases = { activeAliases: {} };
-    if (savedAliases.hasOwnProperty(newAlias.name)) displayCustomError("An alias with same name already exists");
+    if (!hasAliases(searchEngines)) searchEngines = { alias: {} };
+    if (searchEngines.hasOwnProperty(newAlias.name)) displayCustomError("An alias with same name already exists");
 
-    savedAliases.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
-    savedAliases.activeAliases[newAlias.name] = { searchEngine: newAlias.searchEngine, url: newAlias.url };
-    chrome.storage.sync.set({ "aliasObj": savedAliases }, () => {
+    searchEngines.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
+    searchEngines.alias[newAlias.name] = { searchEngine: newAlias.searchEngine, url: newAlias.url };
+    chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
         addAliasToDom(newAlias);
         showData(true);
     });
@@ -111,7 +111,7 @@ function createNewAlias() {
 function clearData() {
     if (confirm("Do you really want to delete all aliases?") === true) {
         chrome.storage.sync.clear();
-        savedAliases = {};
+        searchEngines = {};
 
         showData(false);
     }
@@ -122,8 +122,8 @@ function displayCustomError(msg) {
     throw new Error(msg);
 }
 
-function isObjectNotEmpty(obj) {
-    return obj?.activeAliases && Object.keys(obj.activeAliases).length;
+function hasAliases(obj) {
+    return obj?.alias && Object.keys(obj.alias).length;
 }
 
 document.getElementById("btn-save").addEventListener("click", createNewAlias);
@@ -131,9 +131,9 @@ document.getElementById("btn-save-settings").addEventListener("click", saveSetti
 
 document.getElementById("btn-reset").addEventListener("click", clearData);
 document.getElementById("btn-export-json").addEventListener("click", () => {
-    if (isObjectNotEmpty(savedAliases)) {
+    if (hasAliases(searchEngines)) {
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([JSON.stringify(savedAliases)], { type: 'application/json' }));
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(searchEngines)], { type: 'application/json' }));
         a.download = 'aliases.json';
         a.click();
     } else {
