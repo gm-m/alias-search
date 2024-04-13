@@ -22,11 +22,11 @@ function openPopup() {
 
       chrome.storage.sync.get("aliasObj", (result) => {
         const savedAliases = result.aliasObj;
-        if (!savedAliases) return;
+        if (!savedAliases.activeAliases) return;
 
-        if (savedAliases.hasOwnProperty(alias)) {
-          const queryUrl = savedAliases[alias].url.replace('%s', searchQuery);
-          window.open(queryUrl, "_blank")
+        if (savedAliases.activeAliases.hasOwnProperty(alias)) {
+          const queryUrl = savedAliases.activeAliases[alias].url.replace('%s', searchQuery);
+          window.open(queryUrl, savedAliases.targetWindow)
         }
       });
 

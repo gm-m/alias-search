@@ -7,6 +7,13 @@ function loadSavedData() {
     });
 }
 
+function saveSettings() {
+    if (!savedAliases) savedAliases = {};
+    savedAliases.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
+
+    chrome.storage.sync.set({ "aliasObj": savedAliases }, () => { });
+}
+
 function addAliasToDom(aliasObj) {
     const { name, searchEngine, url } = aliasObj;
 
@@ -65,8 +72,9 @@ function deleteAlias(event) {
 
 function displayData(content) {
     if (isObjectNotEmpty(content)) {
-        for (const key in savedAliases) {
-            addAliasToDom({ name: key, searchEngine: savedAliases[key].searchEngine, url: savedAliases[key].url });
+        document.getElementById('tab-settings').checked = savedAliases.targetWindow === '_blank';
+        for (const key in savedAliases.activeAliases) {
+            addAliasToDom({ name: key, searchEngine: savedAliases.activeAliases[key].searchEngine, url: savedAliases.activeAliases[key].url });
         }
         showData(true);
     } else {
@@ -80,7 +88,7 @@ function showData(flag) {
     document.getElementById('btn-reset').style.display = flag ? 'block' : 'none';
 }
 
-function pushData() {
+function createNewAlias() {
     const newAlias = {
         searchEngine: document.getElementById('search-engine').value,
         name: document.getElementById('alias').value,
@@ -89,10 +97,11 @@ function pushData() {
 
     if (!newAlias.name || !newAlias.url) displayCustomError("Fill all data");
     if (!newAlias.url.includes("%s")) displayCustomError("Url must includes %s");
-    if (!savedAliases) savedAliases = {};
+    if (!isObjectNotEmpty(savedAliases)) savedAliases = { activeAliases: {} };
     if (savedAliases.hasOwnProperty(newAlias.name)) displayCustomError("An alias with same name already exists");
 
-    savedAliases[newAlias.name] = { searchEngine: newAlias.searchEngine, url: newAlias.url };
+    savedAliases.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
+    savedAliases.activeAliases[newAlias.name] = { searchEngine: newAlias.searchEngine, url: newAlias.url };
     chrome.storage.sync.set({ "aliasObj": savedAliases }, () => {
         addAliasToDom(newAlias);
         showData(true);
@@ -114,18 +123,19 @@ function displayCustomError(msg) {
 }
 
 function isObjectNotEmpty(obj) {
-    return obj && Object.keys(obj).length;
+    return obj?.activeAliases && Object.keys(obj.activeAliases).length;
 }
 
-document.getElementById("btn-save").addEventListener("click", pushData);
+document.getElementById("btn-save").addEventListener("click", createNewAlias);
+document.getElementById("btn-save-settings").addEventListener("click", saveSettings);
 
 document.getElementById("btn-reset").addEventListener("click", clearData);
 document.getElementById("btn-export-json").addEventListener("click", () => {
     if (isObjectNotEmpty(savedAliases)) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(savedAliases)], { type: 'application/json' }));
-    a.download = 'aliases.json';
-    a.click();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(savedAliases)], { type: 'application/json' }));
+        a.download = 'aliases.json';
+        a.click();
     } else {
         alert("No data to export");
     }
