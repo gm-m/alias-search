@@ -52,19 +52,8 @@ function updateAlias(event) {
 function deleteAlias(event) {
     const targetId = event.target.id;
 
-    const activeAliasesNodeList = document.querySelectorAll('#display-content .active-alias');
-    let activeAliases = {};
-    activeAliasesNodeList.forEach((divEl) => {
-        const alias = {
-            name: divEl.querySelector('.name').value,
-            value: divEl.querySelector('.value').value,
-        }
-
-        if (alias.name !== targetId) activeAliases[alias.name] = alias.value;
-    })
-
-    searchEngines = activeAliases;
-    chrome.storage.sync.set({ "aliasObj": searchEngines }, () => {
+    searchEngines.alias = Object.fromEntries(Object.entries(searchEngines.alias).filter(([key]) => key !== targetId));
+    chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
         document.getElementById(targetId).remove();
         showData(hasAliases(searchEngines));
     });
