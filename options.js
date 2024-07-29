@@ -2,7 +2,7 @@ let searchEngines = {};
 
 function loadSavedData() {
     chrome.storage.sync.get("searchEnginesObj", (result) => {
-        searchEngines = result.searchEnginesObj;
+        searchEngines = result.searchEnginesObj ?? { targetWindow: '_blank', openAsUrl: true };
         displayData(searchEngines);
     });
 }
@@ -10,6 +10,7 @@ function loadSavedData() {
 function saveSettings() {
     if (!searchEngines) searchEngines = {};
     searchEngines.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
+    searchEngines.openAsUrl = document.getElementById('tab-settings-open-as-url').checked;
 
     chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => { });
 }
@@ -19,16 +20,14 @@ function addAliasToDom(searchEnginesObj) {
 
     const aliasDiv = document.createElement('div');
     aliasDiv.id = name;
-    aliasDiv.className = "active-alias";
-    aliasDiv.style = 'display: flex; flex-direction: column; width: calc(100% / 4); gap: 10px';
-
+    aliasDiv.className = "active-alias d-flex flex-column col-4 gap-2 mb-5";
     aliasDiv.innerHTML = `
-    <input autocomplete="off" class="extended-name" name="${searchEngine}" value="${searchEngine}" readonly>
-    <input autocomplete="off" class="name" name="${name}" value="${name}" readonly>
-    <input id="alias-url" autocomplete="off" class="value" name="${url}" value="${url}">
-    <div style="display: flex; gap: 10px;">
-        <button id="update-${name}" class="${name}" style="width: 50%">Update</button>
-        <button id="${name}" style="width: 50%">Delete</button>
+    <input autocomplete="off" class="extended-name form-control" name="${searchEngine}" value="${searchEngine}" readonly>
+    <input autocomplete="off" class="name form-control" name="${name}" value="${name}" readonly>
+    <input id="alias-url" autocomplete="off" class="value form-control" name="${url}" value="${url}">
+    <div class="d-flex gap-5">
+        <button id="update-${name}" class="btn btn-secondary w-50 ${name}">Update</button>
+        <button id="${name}" class="btn btn-danger w-50">Delete</button>
     </div>
     `;
 
@@ -60,8 +59,10 @@ function deleteAlias(event) {
 }
 
 function displayData(content) {
+    document.getElementById('tab-settings').checked = searchEngines.targetWindow === '_blank';
+    document.getElementById('tab-settings-open-as-url').checked = searchEngines.openAsUrl;
+
     if (hasAliases(content)) {
-        document.getElementById('tab-settings').checked = searchEngines.targetWindow === '_blank';
         for (const key in searchEngines.alias) {
             addAliasToDom({ name: key, searchEngine: searchEngines.alias[key].searchEngine, url: searchEngines.alias[key].url });
         }
@@ -90,6 +91,7 @@ function createNewAlias() {
     if (searchEngines.hasOwnProperty(newAlias.name)) displayCustomError("An alias with same name already exists");
 
     searchEngines.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
+    searchEngines.openAsUrl = document.getElementById('tab-settings-open-as-url').checked;
     searchEngines.alias[newAlias.name] = { searchEngine: newAlias.searchEngine, url: newAlias.url };
     chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
         addAliasToDom(newAlias);

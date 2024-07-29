@@ -2,8 +2,7 @@ let searchEngines = {};
 
 function openPopup() {
   chrome.storage.sync.get("searchEnginesObj", (result) => {
-    searchEngines = result.searchEnginesObj;
-    if (!searchEngines.alias) return;
+    searchEngines = result.searchEnginesObj ?? { targetWindow: '_blank', openAsUrl: true };
   });
 
   const popupContainer = document.createElement('div');
@@ -13,11 +12,13 @@ function openPopup() {
   }
 
   const popup = document.createElement('div');
-  popup.style = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width:50%; z-index: 99"
+  popup.style = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30%; z-index: 999;"
   popup.innerHTML = `
       <div id="cstm-search">
-        <input type="text" id="user-input" placeholder="Search..." autocomplete="off" style="width: 100%; padding: 10px; color: black; background-color: white; border: 1px solid black; font-family: sans-serif; font-size: medium; outline: none;">
-        <span id="active-alias">No match found</span>
+        <input type="text" id="user-input" placeholder="Search..." autocomplete="off" style="width: 100%; border-radius: 5px 5px 0 0; border-right: black; padding: 10px; color: #dee2e3; background-color: #1f1f1f; border-bottom: 1px solid black; font-family: sans-serif; font-size: medium; outline: none;">
+        <div style="width: 100%; padding: 0 10px 0; border-radius: 0 0 5px 5px; background-color: #1f1f1f; border: 1px solid #1f1f1f;">
+          <span id="active-alias" style="color: #dee2e3;">No match found</span>
+        </div>
       </div>
   `;
 
@@ -46,15 +47,13 @@ function openPopup() {
       const searchQuery = userInput.substring(alias.length).trim();
       if (!searchQuery) return;
 
-      chrome.storage.sync.get("searchEnginesObj", (result) => {
-        const searchEngines = result.searchEnginesObj;
-        if (!searchEngines.alias) return;
-
-        if (searchEngines.alias.hasOwnProperty(alias)) {
-          const queryUrl = searchEngines.alias[alias].url.replace('%s', searchQuery);
-          window.open(queryUrl, searchEngines.targetWindow)
-        }
-      });
+      if (!alias && searchEngines.openAsUrl) {
+        const targetUrl = !searchQuery.match(/^https?:\/\//i) ? 'https://' + searchQuery : searchQuery;
+        window.open(targetUrl, searchEngines.targetWindow);
+      } else if (searchEngines.alias?.hasOwnProperty(alias)) {
+        const targetUrl = searchEngines.alias[alias].url.replace('%s', searchQuery);
+        window.open(targetUrl, searchEngines.targetWindow)
+      }
 
       popup.remove();
     }

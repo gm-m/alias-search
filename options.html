@@ -6,53 +6,74 @@
     <link rel="stylesheet" href="options.css">
 </head>
 
-<body>
-    <h1>
-        <center>Alias Search Settings</center>
-    </h1>
-
-    <div id="container" style="display: flex; gap: 50px;">
-        <div id="add-alias">
-            <h3>New search alias</h3>
-            <div class="row">
-                <label>Search engine</label>
-                <input type="text" id="search-engine" />
-            </div>
-            <div class="row">
-                <label>Alias <b>*</b></label>
-                <input type="text" id="alias" />
-            </div>
-            <div class="row">
-                <label>URL with %s in place of query <b>*</b></label>
-                <input type="text" id="url" />
-            </div>
-            <button id="btn-save" style="margin-top: 15px;">Add</button>
-        </div>
-
-        <div id="alias-settings">
-            <h3>Global settings</h3>
-            <div class="row">
-                <label for="tab-settings">Open in new tab</label><br>
-                <input type="checkbox" id="tab-settings" name="tab-settings" checked>
-            </div>
-            <button id="btn-save-settings" style="margin-top: 15px;">Save</button>
-        </div>
+<body class="bg-light container">
+    <div class="mt-3 mb-5">
+        <h1>
+            <center>Alias Search Settings</center>
+        </h1>
     </div>
 
+    <div id="container">
+        <div class="row">
+            <div id="add-alias" class="col-4">
+                <h3>New search alias</h3>
+                <div class="row mt-3">
+                    <label class="p-0">Search engine</label>
+                    <input type="text" id="search-engine" class="form-control" />
+                </div>
+                <div class="row mt-3">
+                    <label class="p-0">Alias <b>*</b></label>
+                    <input type="text" id="alias" class="form-control" />
+                </div>
+                <div class="row mt-3">
+                    <label class="p-0">URL with %s in place of query <b>*</b></label>
+                    <input type="text" id="url" class="form-control" />
+                </div>
+            </div>
+
+            <div id="alias-settings" class="col-4">
+                <h3>Global settings</h3>
+
+                <div class="form-check form-switch form-switch-xl mt-3">
+                    <input id="tab-settings" class="form-check-input" type="checkbox">
+                    <label class="form-check-label" for="tab-settings">Open in new tab</label>
+                </div>
+
+                <div class="form-check form-switch form-switch-xl">
+                    <input id="tab-settings-open-as-url" class="form-check-input" type="checkbox">
+                    <label class="form-check-label" for="tab-settings-open-as-url">Open as Url (If no match are
+                        found)</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-4 p-0">
+                <button id="btn-save" class="btn btn-primary btn-secondary col-4">Add</button>
+            </div>
+
+            <div class="col-4 p-0">
+                <button id="btn-save-settings" class="btn btn-secondary col-4">Save</button>
+            </div>
+        </div>
+    </div>
 
     <hr>
 
     <div>
         <h3>Active aliases</h3>
-        <div>
+
+        <div class="mt-3">
             <span id="display-empty">Empty</span>
-            <div id="display-content"></div>
+            <div id="display-content" class="row"></div>
         </div>
-        <div style="display: flex; gap: 15px; margin-top: 10px;">
-            <button id="btn-reset">Reset</button>
-            <button id="btn-export-json">Export JSON</button>
+
+        <div class="d-flex col-4 gap-5 mt-5 mb-5">
+            <button id="btn-reset" class="btn btn-secondary w-50">Reset</button>
+            <button id="btn-export-json" class="btn btn-secondary w-50">Export JSON</button>
         </div>
     </div>
+
     <script src="options.js"></script>
 </body>
 
