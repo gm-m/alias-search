@@ -12,7 +12,7 @@ function openPopup() {
   }
 
   const popup = document.createElement('div');
-  popup.style = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30%; z-index: 999;"
+  popup.style = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30%; z-index: 999999;"
   popup.innerHTML = `
       <div id="cstm-search">
         <input type="text" id="user-input" placeholder="Search..." autocomplete="off" style="width: 100%; border-radius: 5px 5px 0 0; border-right: black; padding: 10px; color: #dee2e3; background-color: #1f1f1f; border-bottom: 1px solid black; font-family: sans-serif; font-size: medium; outline: none;">
@@ -29,6 +29,7 @@ function openPopup() {
   userInputElement.focus();
 
   userInputElement.addEventListener('input', function (event) {
+    event.stopPropagation();
     const inputText = event.target.value;
     const alias = inputText.substring(0, inputText.indexOf(' '));
     const previewAlias = alias && searchEngines.alias && searchEngines.alias.hasOwnProperty(alias) ? `${searchEngines.alias[alias].searchEngine} | Target: ${searchEngines.targetWindow}` : 'No match found';
@@ -36,11 +37,16 @@ function openPopup() {
     popup.querySelector('#active-alias').innerText = previewAlias;
   });
 
-  this.addEventListener("keydown", (event) => {
-    if (event.key === 'Escape') popup.remove();
+  userInputElement.addEventListener('keydown', function(event) {
+    event.stopPropagation();
   });
 
+  document.addEventListener("keydown", (event) => {
+    if (event.key === 'Escape') popupContainer.remove();
+  }, { capture: true });
+
   popup.querySelector("#cstm-search").addEventListener('keypress', function (e) {
+    e.stopPropagation();
     if (e.key === 'Enter') {
       const userInput = popup.querySelector('#user-input').value;
       const alias = userInput.substring(0, userInput.indexOf(' '));
@@ -52,10 +58,10 @@ function openPopup() {
         window.open(targetUrl, searchEngines.targetWindow);
       } else if (searchEngines.alias?.hasOwnProperty(alias)) {
         const targetUrl = searchEngines.alias[alias].url.replace('%s', searchQuery);
-        window.open(targetUrl, searchEngines.targetWindow)
+        window.open(targetUrl, searchEngines.targetWindow);
       }
 
-      popup.remove();
+      popupContainer.remove();
     }
   });
 }
