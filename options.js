@@ -2,15 +2,16 @@ let searchEngines = {};
 
 function loadSavedData() {
     chrome.storage.sync.get("searchEnginesObj", (result) => {
-        searchEngines = result.searchEnginesObj ?? { targetWindow: '_blank', openAsUrl: true };
+        searchEngines = result.searchEnginesObj ?? { targetWindow: '_blank', openAsUrl: true, incognitoMode: false };
         displayData(searchEngines);
     });
 }
 
 function saveSettings() {
     if (!searchEngines) searchEngines = {};
-    searchEngines.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
+    searchEngines.targetWindow = document.getElementById('tab-settings-target-windows').checked ? '_blank' : '_self';
     searchEngines.openAsUrl = document.getElementById('tab-settings-open-as-url').checked;
+    searchEngines.incognitoMode = document.getElementById('tab-settings-open-incognito-mode').checked;
 
     chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => { });
 }
@@ -59,8 +60,9 @@ function deleteAlias(event) {
 }
 
 function displayData(content) {
-    document.getElementById('tab-settings').checked = searchEngines.targetWindow === '_blank';
+    document.getElementById('tab-settings-target-windows').checked = searchEngines.targetWindow === '_blank';
     document.getElementById('tab-settings-open-as-url').checked = searchEngines.openAsUrl;
+    document.getElementById('tab-settings-open-incognito-mode').checked = searchEngines.incognitoMode;
 
     if (hasAliases(content)) {
         for (const key in searchEngines.alias) {
@@ -90,8 +92,6 @@ function createNewAlias() {
     if (!hasAliases(searchEngines)) searchEngines = { alias: {} };
     if (searchEngines.hasOwnProperty(newAlias.name)) displayCustomError("An alias with same name already exists");
 
-    searchEngines.targetWindow = document.getElementById('tab-settings').checked ? '_blank' : '_self';
-    searchEngines.openAsUrl = document.getElementById('tab-settings-open-as-url').checked;
     searchEngines.alias[newAlias.name] = { searchEngine: newAlias.searchEngine, url: newAlias.url };
     chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
         addAliasToDom(newAlias);

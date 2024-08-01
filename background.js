@@ -14,3 +14,23 @@ chrome.commands.onCommand.addListener(function (command) {
         });
     }
 });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "openTab") {
+        const openTab = () => {
+            message.targetWindow === '_blank' ? chrome.tabs.create({ url: message.url, active: true }) : chrome.tabs.update({ url: message.url, active: true });
+        }
+
+        if (message.incognitoMode) {
+            chrome.windows.getCurrent({}, function (currentWindow) {
+                if (currentWindow.incognito) { // If already in an Incognito window, just open a new tab
+                    openTab();
+                } else { // If in a regular window, create a new Incognito window
+                    chrome.windows.create({ url: message.url, incognito: true });
+                }
+            });
+        } else {
+            openTab();
+        }
+    }
+});

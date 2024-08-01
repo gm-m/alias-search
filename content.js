@@ -7,19 +7,50 @@ function openPopup() {
 
   const popupContainer = document.createElement('div');
   popupContainer.attachShadow({ mode: 'open' });
+  popupContainer.style = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; z-index: 999999;"
   if (popupContainer.shadowRoot) {
-    popupContainer.shadowRoot.innerHTML = `<style>:host {all: initial;}</style>`
+    popupContainer.shadowRoot.innerHTML = `
+    <style>
+      :host {all: initial;}
+
+      .p-0 {
+          padding: 0;
+      }
+
+      span,
+      input {
+          font-family: sans-serif;
+          font-size: medium;
+          color: #d1d0c5;
+          background-color: #323437;
+          border: none;
+          border-radius: .5rem;
+          outline: none;
+      }
+
+      div {
+          background-color: #323437;
+          padding: 12px;
+      }
+    </style>`
   }
 
   const popup = document.createElement('div');
-  popup.style = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30%; z-index: 999999;"
+  popup.style = 'border-radius: .5rem;'
   popup.innerHTML = `
-      <div id="cstm-search">
-        <input type="text" id="user-input" placeholder="Search..." autocomplete="off" style="width: 100%; border-radius: 5px 5px 0 0; border-right: black; padding: 10px; color: #dee2e3; background-color: #1f1f1f; border-bottom: 1px solid black; font-family: sans-serif; font-size: medium; outline: none;">
-        <div style="width: 100%; padding: 0 10px 0; border-radius: 0 0 5px 5px; background-color: #1f1f1f; border: 1px solid #1f1f1f;">
-          <span id="active-alias" style="color: #dee2e3;">No match found</span>
+        <div id="modal">
+          <span class="searchicon">
+            &#x1F50E;&#xFE0E;
+          </span>
+
+          <input type="text" id="user-input" placeholder="Search..."  autocomplete="off">
         </div>
-      </div>
+
+        <hr>
+
+        <div class="p-0">
+          <span id="active-alias">No match found</span>
+        </div>
   `;
 
   popupContainer.shadowRoot.appendChild(popup);
@@ -37,7 +68,7 @@ function openPopup() {
     popup.querySelector('#active-alias').innerText = previewAlias;
   });
 
-  userInputElement.addEventListener('keydown', function(event) {
+  userInputElement.addEventListener('keydown', function (event) {
     event.stopPropagation();
   });
 
@@ -45,7 +76,7 @@ function openPopup() {
     if (event.key === 'Escape') popupContainer.remove();
   }, { capture: true });
 
-  popup.querySelector("#cstm-search").addEventListener('keypress', function (e) {
+  popup.querySelector("#modal").addEventListener('keypress', function (e) {
     e.stopPropagation();
     if (e.key === 'Enter') {
       const userInput = popup.querySelector('#user-input').value;
@@ -55,10 +86,10 @@ function openPopup() {
 
       if (!alias && searchEngines.openAsUrl) {
         const targetUrl = !searchQuery.match(/^https?:\/\//i) ? 'https://' + searchQuery : searchQuery;
-        window.open(targetUrl, searchEngines.targetWindow);
+        chrome.runtime.sendMessage({ action: "openTab", url: targetUrl, targetWindow: searchEngines.targetWindow, incognitoMode: searchEngines.incognitoMode });
       } else if (searchEngines.alias?.hasOwnProperty(alias)) {
         const targetUrl = searchEngines.alias[alias].url.replace('%s', searchQuery);
-        window.open(targetUrl, searchEngines.targetWindow);
+        chrome.runtime.sendMessage({ action: "openTab", url: targetUrl, targetWindow: searchEngines.targetWindow, incognitoMode: searchEngines.incognitoMode });
       }
 
       popupContainer.remove();
