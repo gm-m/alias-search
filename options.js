@@ -13,7 +13,7 @@ function saveSettings() {
     searchEngines.openAsUrl = document.getElementById('tab-settings-open-as-url').checked;
     searchEngines.incognitoMode = document.getElementById('tab-settings-open-incognito-mode').checked;
 
-    chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => { });
+    chrome.storage.sync.set({ "searchEnginesObj": searchEngines });
 }
 
 function addAliasToDom(searchEnginesObj) {
@@ -117,10 +117,24 @@ function hasAliases(obj) {
     return obj?.alias && Object.keys(obj.alias).length;
 }
 
-document.getElementById("btn-save").addEventListener("click", createNewAlias);
+document.getElementById("btn-add-new-alias").addEventListener("click", createNewAlias);
 document.getElementById("btn-save-settings").addEventListener("click", saveSettings);
 
 document.getElementById("btn-reset").addEventListener("click", clearData);
+document.getElementById("btn-import-json").onchange = ({ target }) => {
+    const file = target.files[0];
+
+    if (file) {
+        new Response(file).json().then((fileContent) => {
+            const mergedAliases = { ...searchEngines.alias, ...fileContent.alias };
+            searchEngines = fileContent;
+            searchEngines.alias = mergedAliases;
+
+            chrome.storage.sync.set({ "searchEnginesObj": searchEngines });
+        });
+    }
+}
+
 document.getElementById("btn-export-json").addEventListener("click", () => {
     if (hasAliases(searchEngines)) {
         const a = document.createElement('a');
