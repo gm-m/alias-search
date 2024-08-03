@@ -117,6 +117,8 @@ function hasAliases(obj) {
     return obj?.alias && Object.keys(obj.alias).length;
 }
 
+// EVENT LISTENERS
+
 document.getElementById("btn-add-new-alias").addEventListener("click", createNewAlias);
 document.getElementById("btn-save-settings").addEventListener("click", saveSettings);
 
@@ -130,11 +132,12 @@ document.getElementById("btn-import-json").onchange = ({ target }) => {
             searchEngines = fileContent;
             searchEngines.alias = mergedAliases;
 
-            chrome.storage.sync.set({ "searchEnginesObj": searchEngines });
+            chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
+                loadSavedData();
+            });
         });
     }
 }
-
 document.getElementById("btn-export-json").addEventListener("click", () => {
     if (hasAliases(searchEngines)) {
         const a = document.createElement('a');
