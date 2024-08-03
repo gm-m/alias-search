@@ -17,8 +17,7 @@ function saveSettings() {
 }
 
 function addAliasToDom(searchEnginesObj) {
-    const { name, searchEngine, url } = searchEnginesObj;
-
+    const { name, searchEngine, url, hasPlaceholder } = searchEnginesObj;
     const aliasDiv = document.createElement('div');
     aliasDiv.id = name;
     aliasDiv.className = "active-alias d-flex flex-column col-4 gap-2 mb-5";
@@ -26,6 +25,11 @@ function addAliasToDom(searchEnginesObj) {
     <input autocomplete="off" class="extended-name form-control" name="${searchEngine}" value="${searchEngine}" readonly>
     <input autocomplete="off" class="name form-control" name="${name}" value="${name}" readonly>
     <input id="alias-url" autocomplete="off" class="value form-control" name="${url}" value="${url}">
+    <div class="form-check form-switch form-switch-xl">
+        <input id="alias-placeholder" class="form-check-input" type="checkbox" disabled>
+        <label class="form-check-label" for="alias-placeholder">Placeholder</label>
+    </div>
+
     <div class="d-flex gap-5">
         <button id="update-${name}" class="btn btn-secondary w-50 ${name}">Update</button>
         <button id="${name}" class="btn btn-danger w-50">Delete</button>
@@ -34,6 +38,7 @@ function addAliasToDom(searchEnginesObj) {
 
     aliasDiv.querySelectorAll('button')[0].addEventListener("click", updateAlias, false);
     aliasDiv.querySelectorAll('button')[1].addEventListener("click", deleteAlias, false);
+    aliasDiv.querySelector('#alias-placeholder').checked = hasPlaceholder;
 
     const divContainer = document.getElementById('display-content');
     divContainer.appendChild(aliasDiv);
@@ -66,7 +71,12 @@ function displayData(content) {
 
     if (hasAliases(content)) {
         for (const key in searchEngines.alias) {
-            addAliasToDom({ name: key, searchEngine: searchEngines.alias[key].searchEngine, url: searchEngines.alias[key].url });
+            addAliasToDom({
+                name: key,
+                searchEngine: searchEngines.alias[key].searchEngine,
+                url: searchEngines.alias[key].url,
+                hasPlaceholder: searchEngines.alias[key].hasPlaceholder
+            });
         }
         showData(true);
     } else {
@@ -81,18 +91,24 @@ function showData(flag) {
 }
 
 function createNewAlias() {
+    const aliasUrlDomEl = document.getElementById('url');
     const newAlias = {
         searchEngine: document.getElementById('search-engine').value,
         name: document.getElementById('alias').value,
-        url: document.getElementById('url').value,
+        url: aliasUrlDomEl.value,
+        hasPlaceholder: aliasUrlDomEl.value && aliasUrlDomEl.value.includes("%s")
     };
 
     if (!newAlias.name || !newAlias.url) displayCustomError("Fill all data");
-    if (!newAlias.url.includes("%s")) displayCustomError("Url must includes %s");
     if (!hasAliases(searchEngines)) searchEngines = { alias: {} };
     if (searchEngines.hasOwnProperty(newAlias.name)) displayCustomError("An alias with same name already exists");
 
-    searchEngines.alias[newAlias.name] = { searchEngine: newAlias.searchEngine, url: newAlias.url };
+    searchEngines.alias[newAlias.name] = {
+        searchEngine: newAlias.searchEngine,
+        url: newAlias.url,
+        hasPlaceholder: newAlias.hasPlaceholder
+    };
+
     chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
         addAliasToDom(newAlias);
         showData(true);

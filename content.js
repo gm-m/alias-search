@@ -80,15 +80,19 @@ function openPopup() {
     e.stopPropagation();
     if (e.key === 'Enter') {
       const userInput = popup.querySelector('#user-input').value;
-      const alias = userInput.substring(0, userInput.indexOf(' '));
-      const searchQuery = userInput.substring(alias.length).trim();
-      if (!searchQuery) return;
+      const [aliasName, ...searchQueryParts] = userInput.split(' ');
+      const aliasFound = searchEngines.alias?.hasOwnProperty(aliasName);
+      const searchQuery = searchQueryParts.join(' ').trim();
+      if (!aliasName) return;
 
-      if (!alias && searchEngines.openAsUrl) {
-        const targetUrl = !searchQuery.match(/^https?:\/\//i) ? 'https://' + searchQuery : searchQuery;
+      if (!aliasFound && searchEngines.openAsUrl) {
+        const targetUrl = !searchQuery.match(/^https?:\/\//i) ? 'https://' + userInput : userInput;
         chrome.runtime.sendMessage({ action: "openTab", url: targetUrl, targetWindow: searchEngines.targetWindow, incognitoMode: searchEngines.incognitoMode });
-      } else if (searchEngines.alias?.hasOwnProperty(alias)) {
-        const targetUrl = searchEngines.alias[alias].url.replace('%s', searchQuery);
+      } else if (aliasFound) {
+        const alias = searchEngines.alias[aliasName];
+        if (alias.hasPlaceholder && !searchQuery) return;
+
+        const targetUrl = alias.hasPlaceholder ? alias.url.replace('%s', searchQuery) : alias.url;
         chrome.runtime.sendMessage({ action: "openTab", url: targetUrl, targetWindow: searchEngines.targetWindow, incognitoMode: searchEngines.incognitoMode });
       }
 
