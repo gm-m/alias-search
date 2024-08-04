@@ -2,7 +2,7 @@ let searchEngines = {};
 
 function loadSavedData() {
     chrome.storage.sync.get("searchEnginesObj", (result) => {
-        searchEngines = result.searchEnginesObj ?? { targetWindow: '_blank', openAsUrl: true, incognitoMode: false };
+        searchEngines = result.searchEnginesObj ?? { targetWindow: '_blank', openAsUrl: true, incognitoMode: false, enableMultiAlias: false };
         displayData(searchEngines);
     });
 }
@@ -12,6 +12,7 @@ function saveSettings() {
     searchEngines.targetWindow = document.getElementById('tab-settings-target-windows').checked ? '_blank' : '_self';
     searchEngines.openAsUrl = document.getElementById('tab-settings-open-as-url').checked;
     searchEngines.incognitoMode = document.getElementById('tab-settings-open-incognito-mode').checked;
+    searchEngines.enableMultiAlias = document.getElementById('tab-settings-enable-multi-alias').checked;
 
     chrome.storage.sync.set({ "searchEnginesObj": searchEngines });
 }
@@ -68,6 +69,7 @@ function displayData(content) {
     document.getElementById('tab-settings-target-windows').checked = searchEngines.targetWindow === '_blank';
     document.getElementById('tab-settings-open-as-url').checked = searchEngines.openAsUrl;
     document.getElementById('tab-settings-open-incognito-mode').checked = searchEngines.incognitoMode;
+    document.getElementById('tab-settings-enable-multi-alias').checked = searchEngines.enableMultiAlias;
 
     if (hasAliases(content)) {
         for (const key in searchEngines.alias) {

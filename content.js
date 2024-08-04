@@ -2,7 +2,7 @@ let searchEngines = {};
 
 function openPopup() {
   chrome.storage.sync.get("searchEnginesObj", (result) => {
-    searchEngines = result.searchEnginesObj ?? { targetWindow: '_blank', openAsUrl: true };
+    searchEngines = result.searchEnginesObj ?? { targetWindow: '_blank', openAsUrl: true, incognitoMode: false, enableMultiAlias: false };
   });
 
   const popupContainer = document.createElement('div');
@@ -61,12 +61,33 @@ function openPopup() {
 
   userInputElement.addEventListener('input', function (event) {
     event.stopPropagation();
-    const inputText = event.target.value;
-    const alias = inputText.substring(0, inputText.indexOf(' '));
-    const previewAlias = alias && searchEngines.alias && searchEngines.alias.hasOwnProperty(alias) ? `${searchEngines.alias[alias].searchEngine} | Target: ${searchEngines.targetWindow}` : 'No match found';
 
-    popup.querySelector('#active-alias').innerText = previewAlias;
+    const inputText = event.target.value;
+    popup.querySelector('#active-alias').innerText = getAliasPreview(inputText);
   });
+
+  function getAliasPreview(inputText) {
+    if (searchEngines.enableMultiAlias) {
+      const aliasSet = new Set();
+      let aliasDescriptionArray = [];
+
+      for (const element of inputText.split(' ')) {
+        if (searchEngines.alias.hasOwnProperty(element)) {
+          if (!aliasSet.has(element)) {
+            aliasSet.add(element);
+            aliasDescriptionArray.push(searchEngines.alias[element].searchEngine);
+          }
+        } else {
+          break; // Stop after the first non alias found. We can assume the rest of the string is the search query
+        }
+      }
+
+      return aliasDescriptionArray.length ? `${aliasDescriptionArray.join(' - ')} | Target: ${searchEngines.targetWindow}` : 'No match found';
+    } else {
+      const aliasName = inputText.split(' ')[0];
+      return aliasName && searchEngines.alias && searchEngines.alias.hasOwnProperty(aliasName) ? `${searchEngines.alias[aliasName].searchEngine} | Target: ${searchEngines.targetWindow}` : 'No match found';
+    }
+  }
 
   userInputElement.addEventListener('keydown', function (event) {
     event.stopPropagation();
