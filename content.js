@@ -71,14 +71,19 @@ async function openPopup() {
   const activeAliasElement = popupContainer.shadowRoot.querySelector('#active-alias');
 
   userInputElement.focus();
-  userInputElement.addEventListener('input', (event) => {
-    cachedSearchPayload = parseAliases(event.target.value);
+  userInputElement.addEventListener('keydown', (e) => e.stopPropagation());
+  userInputElement.addEventListener('input', (e) => {
+    cachedSearchPayload = parseAliases(e.target.value);
     activeAliasElement.innerText = getAliasDescription();
   });
 
   popupContainer.shadowRoot.querySelector("#modal").addEventListener('keypress', (e) => {
     e.stopPropagation();
-    handleUserInput(e, popupContainer);
+
+    if (e.key === 'Enter') {
+      handleUserInput(e);
+      popupContainer.remove();
+    }
   });
 
   document.addEventListener("keydown", (event) => {
@@ -130,29 +135,25 @@ const getAliasDescription = () => {
   return `${aliasDescriptions.join(' - ')} | Target: ${searchEngines.targetWindow}`;
 };
 
-const handleUserInput = (e, popupContainer) => {
-  if (e.key === 'Enter') {
-    const { aliases, searchQuery } = cachedSearchPayload;
-    const urls = [];
+const handleUserInput = (e) => {
+  const { aliases, searchQuery } = cachedSearchPayload;
+  const urls = [];
 
-    if (aliases.length === 0 && searchEngines.openAsUrl) {
-      const url = !e.target.value.match(/^https?:\/\//i) ? 'https://' + e.target.value : e.target.value;
-      urls.push(url);
-    } else {
-      aliases.forEach(aliasName => {
-        const alias = searchEngines.alias[aliasName];
-        if (alias.hasPlaceholder && !searchQuery) return;
+  if (aliases.length === 0 && searchEngines.openAsUrl) {
+    const url = !e.target.value.match(/^https?:\/\//i) ? 'https://' + e.target.value : e.target.value;
+    urls.push(url);
+  } else {
+    aliases.forEach(aliasName => {
+      const alias = searchEngines.alias[aliasName];
+      if (alias.hasPlaceholder && !searchQuery) return;
 
-        const targetUrl = alias.hasPlaceholder
-          ? alias.url.replace('%s', encodeURIComponent(searchQuery))
-          : alias.url;
+      const targetUrl = alias.hasPlaceholder
+        ? alias.url.replace('%s', encodeURIComponent(searchQuery))
+        : alias.url;
 
-        urls.push(targetUrl);
-      });
-    }
-
-    if (urls.length) sendOpenTabsEvent(urls);
-
-    popupContainer.remove();
+      urls.push(targetUrl);
+    });
   }
+
+  if (urls.length) sendOpenTabsEvent(urls);
 };
