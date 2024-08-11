@@ -16,21 +16,41 @@ chrome.commands.onCommand.addListener(function (command) {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "openTab") {
-        const openTab = () => {
-            message.targetWindow === '_blank' ? chrome.tabs.create({ url: message.url, active: true }) : chrome.tabs.update({ url: message.url, active: true });
-        }
+    if (message.action === "openTabs") {
+        const { urls } = message;
+
+        const openTabs = (windowId) => {
+            urls.forEach(url => {
+                if (targetWindow === '_blank') {
+                    chrome.tabs.create({ url: url, windowId: windowId });
+                } else {
+                    chrome.tabs.query({ active: true, windowId: windowId }, ([activeTab]) => {
+                        if (activeTab) {
+                            chrome.tabs.update(activeTab.id, { url: url });
+                        } else {
+                            chrome.tabs.create({ url: url, windowId: windowId });
+                        }
+                    });
+                }
+            });
+        };
 
         if (message.incognitoMode) {
             chrome.windows.getCurrent({}, function (currentWindow) {
-                if (currentWindow.incognito) { // If already in an Incognito window, just open a new tab
-                    openTab();
-                } else { // If in a regular window, create a new Incognito window
-                    chrome.windows.create({ url: message.url, incognito: true });
+                if (currentWindow.incognito) {
+                    openTabs(currentWindow.id);
+                } else {
+                    chrome.windows.create({ url: urls[0], incognito: true }, (newWindow) => {
+                        if (urls.length > 1) {
+                            urls.slice(1).forEach(url => {
+                                chrome.tabs.create({ url: url, windowId: newWindow.id });
+                            });
+                        }
+                    });
                 }
             });
         } else {
-            openTab();
+            openTabs();
         }
     }
 });
