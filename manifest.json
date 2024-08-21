@@ -7,7 +7,6 @@
         "declarativeContent",
         "tabs",
         "activeTab",
-        "incognito",
         "scripting"
     ],
     "options_page": "options.html",
