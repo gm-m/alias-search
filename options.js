@@ -23,8 +23,8 @@ function addAliasToDom(searchEnginesObj) {
     aliasDiv.id = name;
     aliasDiv.className = "active-alias d-flex flex-column col-4 gap-2 mb-5";
     aliasDiv.innerHTML = `
-    <input autocomplete="off" class="extended-name form-control" name="${searchEngine}" value="${searchEngine}" readonly>
-    <input autocomplete="off" class="name form-control" name="${name}" value="${name}" readonly>
+    <input class="extended-name form-control" name="${searchEngine}" value="${searchEngine}" autocomplete="off" readonly>
+    <input id="alias-name" class="name form-control" name="${name}" value="${name}" autocomplete="off" readonly>
     <input id="alias-url" autocomplete="off" class="value form-control" name="${url}" value="${url}">
     <div class="form-check form-switch form-switch-xl">
         <input id="alias-placeholder" class="form-check-input" type="checkbox" disabled>
@@ -33,34 +33,33 @@ function addAliasToDom(searchEnginesObj) {
 
     <div class="d-flex gap-5">
         <button id="update-${name}" class="btn btn-secondary w-50 ${name}">Update</button>
-        <button id="${name}" class="btn btn-danger w-50">Delete</button>
+        <button id="delete-${name}" class="btn btn-danger w-50">Delete</button>
     </div>
     `;
 
-    aliasDiv.querySelectorAll('button')[0].addEventListener("click", updateAlias, false);
-    aliasDiv.querySelectorAll('button')[1].addEventListener("click", deleteAlias, false);
+    aliasDiv.querySelectorAll('button')[0].addEventListener("click", updateAlias.bind(this, aliasDiv), false);
+    aliasDiv.querySelectorAll('button')[1].addEventListener("click", deleteAlias.bind(this, name), false);
     aliasDiv.querySelector('#alias-placeholder').checked = hasPlaceholder;
 
     const divContainer = document.getElementById('display-content');
     divContainer.appendChild(aliasDiv);
 }
 
-function updateAlias(event) {
-    const targetClassName = event.target.className;
-    const targetInput = document.querySelectorAll(`#display-content #${targetClassName} input`);
-    const [aliasInput, urlInput] = targetInput;
+function updateAlias(div) {
+    const [name, url] = [div.querySelector('#alias-name').value, div.querySelector('#alias-url').value];
+    const hasPlaceholder = url.includes("%s");
 
-    if (!urlInput.value.includes("%s")) displayCustomError("Url must includes %s");
-    searchEngines[targetClassName] = { searchEngine: aliasInput.value, url: urlInput.value };
+    searchEngines.alias[name].url = url;
+    searchEngines.alias[name].hasPlaceholder = hasPlaceholder;
+    div.querySelector('#alias-placeholder').checked = hasPlaceholder;
+
     chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => { });
 }
 
-function deleteAlias(event) {
-    const targetId = event.target.id;
-
-    searchEngines.alias = Object.fromEntries(Object.entries(searchEngines.alias).filter(([key]) => key !== targetId));
+function deleteAlias(name) {
+    searchEngines.alias = Object.fromEntries(Object.entries(searchEngines.alias).filter(([key]) => key !== name));
     chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
-        document.getElementById(targetId).remove();
+        document.getElementById(name).remove();
         showData(hasAliases(searchEngines));
     });
 }

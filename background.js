@@ -21,7 +21,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         const openTabs = (windowId) => {
             urls.forEach(url => {
-                if (targetWindow === '_blank') {
+                if (message.targetWindow === '_blank') {
                     chrome.tabs.create({ url: url, windowId: windowId });
                 } else {
                     chrome.tabs.query({ active: true, windowId: windowId }, ([activeTab]) => {
