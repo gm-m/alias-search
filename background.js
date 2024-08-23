@@ -16,41 +16,33 @@ chrome.commands.onCommand.addListener(function (command) {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "openTabs") {
-        const { urls } = message;
+    if (message.action !== "openTabs") return;
 
-        const openTabs = (windowId) => {
-            urls.forEach(url => {
-                if (message.targetWindow === '_blank') {
-                    chrome.tabs.create({ url: url, windowId: windowId });
-                } else {
-                    chrome.tabs.query({ active: true, windowId: windowId }, ([activeTab]) => {
-                        if (activeTab) {
-                            chrome.tabs.update(activeTab.id, { url: url });
-                        } else {
-                            chrome.tabs.create({ url: url, windowId: windowId });
-                        }
-                    });
-                }
-            });
-        };
+    const { urls, targetWindow, incognitoMode } = message;
+    const createTabsInWindow = (windowId) => {
+        urls.forEach((url) => {
+            if (targetWindow === '_blank') {
+                chrome.tabs.create({ url, windowId, active: true });
+            } else {
+                chrome.windows.update(windowId, { focused: true });
+                chrome.tabs.update({ url, active: true });
+            }
+        });
+    };
 
-        if (message.incognitoMode) {
-            chrome.windows.getCurrent({}, function (currentWindow) {
-                if (currentWindow.incognito) {
-                    openTabs(currentWindow.id);
-                } else {
-                    chrome.windows.create({ url: urls[0], incognito: true }, (newWindow) => {
-                        if (urls.length > 1) {
-                            urls.slice(1).forEach(url => {
-                                chrome.tabs.create({ url: url, windowId: newWindow.id });
-                            });
-                        }
-                    });
-                }
-            });
-        } else {
-            openTabs();
-        }
+    if (incognitoMode) {
+        chrome.windows.getAll({ windowTypes: ['normal'] }, (windows) => {
+            const incognitoWindow = windows.find((window) => window.incognito);
+            if (incognitoWindow) {
+                createTabsInWindow(incognitoWindow.id);
+                chrome.windows.update(incognitoWindow.id, { focused: true });
+            } else {
+                chrome.windows.create({ url: urls, incognito: true });
+            }
+        });
+    } else {
+        chrome.windows.getLastFocused((window) => {
+            createTabsInWindow(window.id);
+        });
     }
 });
