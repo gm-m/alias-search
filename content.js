@@ -40,6 +40,11 @@ const createPopupElement = () => {
             background-color: #323437;
             padding: 12px;
         }
+        #preview-alias {
+          display: flex;
+          justify-content: space-between;
+        }
+
     `;
 
   const popup = document.createElement('div');
@@ -50,8 +55,9 @@ const createPopupElement = () => {
             <input type="text" id="user-input" placeholder="Search..." autocomplete="off">
         </div>
         <hr>
-        <div class="p-0">
+        <div id="preview-alias" class="p-0">
             <span id="active-alias">No match found</span>
+            <span id="incognito-mode">Incognito mode: ${searchEngines.incognitoMode ? 'On' : 'Off'}</span>
         </div>
     `;
 
