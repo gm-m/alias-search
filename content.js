@@ -109,7 +109,8 @@ const sendOpenTabsEvent = (urls) => {
 const parseAliases = (inputText) => {
   const words = inputText.split(' ');
   const aliases = [];
-  const aliasDescriptions = [];
+  const aliasDescriptions = new Set();
+  const categories = [];
 
   let searchQuery = '';
 
@@ -121,20 +122,28 @@ const parseAliases = (inputText) => {
       }
 
       aliases.push(word);
-      aliasDescriptions.push(searchEngines.alias[word].searchEngine);
+      aliasDescriptions.add(searchEngines.alias[word].searchEngine);
+
     } else {
+      // Check if the word matches any category
+      for (const alias in searchEngines.alias) {
+        if (searchEngines.alias[alias].categories && searchEngines.alias[alias].categories.includes(word)) {
+          categories.push(word);
+          aliasDescriptions.add(`${word} (Category)`);
+        }
+      }
       searchQuery = words.slice(words.indexOf(word)).join(' ');
       break;
     }
   }
 
-  return { aliases, aliasDescriptions, searchQuery };
+  return { aliases, aliasDescriptions: Array.from(aliasDescriptions), searchQuery, categories };
 };
 
 const getAliasDescription = () => {
-  const { aliases, aliasDescriptions } = cachedSearchPayload;
+  const { aliasDescriptions } = cachedSearchPayload;
 
-  if (aliases.length === 0) {
+  if (aliasDescriptions.length === 0) {
     return 'No match found';
   }
 
@@ -142,24 +151,40 @@ const getAliasDescription = () => {
 };
 
 const handleUserInput = (e) => {
-  const { aliases, searchQuery } = cachedSearchPayload;
-  const urls = [];
+  const { aliases, searchQuery, categories } = cachedSearchPayload;
+  const urls = new Set(); // Use a Set to avoid duplicate URLs
 
-  if (aliases.length === 0 && searchEngines.openAsUrl) {
-    const url = !e.target.value.match(/^https?:\/\//i) ? 'https://' + e.target.value : e.target.value;
-    urls.push(url);
-  } else {
-    aliases.forEach(aliasName => {
+  const addUrl = (alias) => {
+    const targetUrl = alias.hasPlaceholder
+      ? alias.url.replace('%s', encodeURIComponent(searchQuery))
+      : alias.url;
+
+    urls.add(targetUrl);
+  };
+
+  // Add URLs for aliases directly mentioned in the search query
+  aliases.forEach(aliasName => {
+    const alias = searchEngines.alias[aliasName];
+    if (alias.hasPlaceholder && !searchQuery) return;
+
+    addUrl(alias);
+  });
+
+  // Add URLs for aliases linked to the specified categories
+  if (categories.length > 0) { // {{ edit_9 }}
+    Object.keys(searchEngines.alias).forEach(aliasName => {
       const alias = searchEngines.alias[aliasName];
-      if (alias.hasPlaceholder && !searchQuery) return;
-
-      const targetUrl = alias.hasPlaceholder
-        ? alias.url.replace('%s', encodeURIComponent(searchQuery))
-        : alias.url;
-
-      urls.push(targetUrl);
+      if (alias.categories && alias.categories.some(category => categories.includes(category))) {
+        addUrl(alias);
+      }
     });
   }
 
-  if (urls.length) sendOpenTabsEvent(urls);
+  // If no aliases or categories matched, consider opening as URL if enabled
+  if (urls.size === 0 && searchEngines.openAsUrl) {
+    const url = !e.target.value.match(/^https?:\/\//i) ? 'https://' + e.target.value : e.target.value;
+    urls.add(url);
+  }
+
+  if (urls.size > 0) sendOpenTabsEvent(Array.from(urls));
 };
