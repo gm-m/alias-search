@@ -17,6 +17,7 @@ The Alias Search Extension is a browser extension designed to enhance your web s
 - **Open as URL**: Option to open the search query as a URL if no matching alias is found.
 - **Incognito Mode**: Enable the option to open searches in incognito mode.
 - **Multi Alias Support**: Allow multiple aliases to be triggered simultaneously.
+- **Prefill Search Bar with Current Tab URL**: Option to automatically fill the search bar with the URL of the current tab when enabled.
 
 ### Import/Export Functionality
 
@@ -31,13 +32,8 @@ The Alias Search Extension is a browser extension designed to enhance your web s
 ## Getting Started
 
 1. Download the extension files from the repository.
-
 2. Open your browser's extension management page (e.g., `chrome://extensions` for Chrome).
-
 3. Enable "Developer mode" (usually found in the top right corner).
-
 4. Click on "Load unpacked" and select the folder containing the extension files.
-
 5. Open the extension settings to add your preferred search aliases.
-
-6. Use the search input to quickly access your jliases while browsing.
+6. Use the search input to quickly access your aliases while browsing.

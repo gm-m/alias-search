@@ -16,6 +16,10 @@ chrome.commands.onCommand.addListener(function (command) {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "getCurrentTabUrl") {
+        sendResponse({ url: sender.tab.url });
+    }
+
     if (message.action !== "openTabs") return;
 
     const { urls, targetWindow, incognitoMode } = message;
@@ -46,3 +50,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
     }
 });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "getCurrentTabUrl") {
+        sendResponse({ url: sender.tab.url });
+    }
+});
+
+
+// // Send a message to the background script to get the current tab's URL
+// chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+//     const currentTabUrl = tabs[0]?.url || '';
+//     // Prefill the search input with the current tab's URL if it's valid
+//     if (currentTabUrl && currentTabUrl.startsWith('http')) {
+//         userInputElement.value = currentTabUrl;
+//     }
+// });

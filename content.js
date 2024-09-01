@@ -76,6 +76,15 @@ async function openPopup() {
   const userInputElement = popupContainer.shadowRoot.querySelector('#user-input');
   const activeAliasElement = popupContainer.shadowRoot.querySelector('#active-alias');
 
+ if (searchEngines.prefillUrl) {
+    chrome.runtime.sendMessage({ action: 'getCurrentTabUrl' }, (response) => {
+      console.log({ response });
+
+      const currentTabUrl = response.url || '';
+      if (currentTabUrl) userInputElement.value = currentTabUrl;
+    });
+  }
+
   userInputElement.focus();
   userInputElement.addEventListener('keydown', (e) => e.stopPropagation());
   userInputElement.addEventListener('input', (e) => {
@@ -171,7 +180,7 @@ const handleUserInput = (e) => {
   });
 
   // Add URLs for aliases linked to the specified categories
-  if (categories.length > 0) { // {{ edit_9 }}
+  if (categories.length > 0) {
     Object.keys(searchEngines.alias).forEach(aliasName => {
       const alias = searchEngines.alias[aliasName];
       if (alias.categories && alias.categories.some(category => categories.includes(category))) {
