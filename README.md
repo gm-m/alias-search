@@ -17,7 +17,15 @@ The Alias Search Extension is a browser extension designed to enhance your web s
 - **Open as URL**: Option to open the search query as a URL if no matching alias is found.
 - **Incognito Mode**: Enable the option to open searches in incognito mode.
 - **Multi Alias Support**: Allow multiple aliases to be triggered simultaneously.
-- **Prefill Search Bar with Current Tab URL**: Option to automatically fill the search bar with the URL of the current tab when enabled.
+- **Prefill Search Bar with Current Tab URL**: Option to automatically fill the search bar with the URL of the current tab.
+
+### Custom Syntax for Overriding Global Settings
+
+- **Override Global Settings**: Use special symbols to override global settings for individual aliases.
+  - `!` before an alias to open it in incognito mode.
+  - `!!` before an alias to explicitly disable incognito mode.
+  - `@` before an alias to open it in a new tab.
+  - `@@` before an alias to explicitly disable opening in a new tab.
 
 ### Import/Export Functionality
 

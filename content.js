@@ -76,10 +76,8 @@ async function openPopup() {
   const userInputElement = popupContainer.shadowRoot.querySelector('#user-input');
   const activeAliasElement = popupContainer.shadowRoot.querySelector('#active-alias');
 
- if (searchEngines.prefillUrl) {
+  if (searchEngines.prefillUrl) {
     chrome.runtime.sendMessage({ action: 'getCurrentTabUrl' }, (response) => {
-      console.log({ response });
-
       const currentTabUrl = response.url || '';
       if (currentTabUrl) userInputElement.value = currentTabUrl;
     });
@@ -110,9 +108,35 @@ const sendOpenTabsEvent = (urls) => {
   chrome.runtime.sendMessage({
     action: "openTabs",
     urls: urls,
-    targetWindow: searchEngines.targetWindow,
-    incognitoMode: searchEngines.incognitoMode
   });
+};
+
+const getTabOptions = (word) => {
+  const settings = {
+    incognito: searchEngines.incognitoMode,
+    newTab: searchEngines.targetWindow
+  };
+
+  const settingsMap = {
+    '!': 'incognito',
+    '@': 'newTab'
+  };
+
+  for (let i = 0; i < word.length; i++) {
+    const char = word[i];
+    const setting = settingsMap[char];
+
+    if (!setting) break;
+
+    if (word[i + 1] === char) {
+      settings[setting] = false;
+      i++;
+    } else {
+      settings[setting] = true;
+    }
+  }
+
+  return settings;
 };
 
 const parseAliases = (inputText) => {
@@ -124,21 +148,23 @@ const parseAliases = (inputText) => {
   let searchQuery = '';
 
   for (const word of words) {
-    if (searchEngines.alias.hasOwnProperty(word)) {
+    const tabOptions = getTabOptions(word);
+    const cleanWord = word.replace(/^[!@]+/, '');
+
+    if (searchEngines.alias.hasOwnProperty(cleanWord)) {
       if (!searchEngines.enableMultiAlias && aliases.length) {
         searchQuery = words.slice(words.indexOf(word)).join(' ');
         break;
       }
 
-      aliases.push(word);
-      aliasDescriptions.add(searchEngines.alias[word].searchEngine);
+      aliases.push({ alias: cleanWord, ...tabOptions });
+      aliasDescriptions.add(searchEngines.alias[cleanWord].searchEngine);
 
-    } else {
-      // Check if the word matches any category
+    } else { // Check if the word matches any category
       for (const alias in searchEngines.alias) {
-        if (searchEngines.alias[alias].categories && searchEngines.alias[alias].categories.includes(word)) {
-          categories.push(word);
-          aliasDescriptions.add(`${word} (Category)`);
+        if (searchEngines.alias[alias].categories && searchEngines.alias[alias].categories.includes(cleanWord)) {
+          categories.push(cleanWord);
+          aliasDescriptions.add(`${cleanWord} (Category)`);
         }
       }
       searchQuery = words.slice(words.indexOf(word)).join(' ');
@@ -163,20 +189,20 @@ const handleUserInput = (e) => {
   const { aliases, searchQuery, categories } = cachedSearchPayload;
   const urls = new Set(); // Use a Set to avoid duplicate URLs
 
-  const addUrl = (alias) => {
+  const addUrl = (alias, tabOptions) => {
     const targetUrl = alias.hasPlaceholder
       ? alias.url.replace('%s', encodeURIComponent(searchQuery))
       : alias.url;
 
-    urls.add(targetUrl);
+    urls.add({ url: targetUrl, ...tabOptions });
   };
 
   // Add URLs for aliases directly mentioned in the search query
-  aliases.forEach(aliasName => {
+  aliases.forEach(({ alias: aliasName, incognito, newTab }) => {
     const alias = searchEngines.alias[aliasName];
     if (alias.hasPlaceholder && !searchQuery) return;
 
-    addUrl(alias);
+    addUrl(alias, { incognito, newTab });
   });
 
   // Add URLs for aliases linked to the specified categories
@@ -184,7 +210,7 @@ const handleUserInput = (e) => {
     Object.keys(searchEngines.alias).forEach(aliasName => {
       const alias = searchEngines.alias[aliasName];
       if (alias.categories && alias.categories.some(category => categories.includes(category))) {
-        addUrl(alias);
+        addUrl(alias, { incognito: searchEngines.incognitoMode, newTab: searchEngines.targetWindow });
       }
     });
   }
@@ -192,7 +218,7 @@ const handleUserInput = (e) => {
   // If no aliases or categories matched, consider opening as URL if enabled
   if (urls.size === 0 && searchEngines.openAsUrl) {
     const url = !e.target.value.match(/^https?:\/\//i) ? 'https://' + e.target.value : e.target.value;
-    urls.add(url);
+    urls.add({ url, incognito: searchEngines.incognitoMode, newTab: searchEngines.targetWindow });
   }
 
   if (urls.size > 0) sendOpenTabsEvent(Array.from(urls));
