@@ -90,7 +90,7 @@ async function openPopup() {
     activeAliasElement.innerText = getAliasDescription();
   });
 
-  popupContainer.shadowRoot.querySelector("#modal").addEventListener('keypress', (e) => {
+  popupContainer.shadowRoot.querySelector("#modal").addEventListener('keyup', (e) => {
     e.stopPropagation();
 
     if (e.key === 'Enter') {
