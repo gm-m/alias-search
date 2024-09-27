@@ -1,18 +1,20 @@
+browser.runtime.onMessage.addListener((message) => {
+  if (message.action === "openPopup") {
+    openPopup();
+  }
+});
+
 let searchEngines = {};
 let cachedSearchPayload = { aliases: [], aliasDescriptions: [], searchQuery: '' };
 
 const loadSearchEngines = () => {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get("searchEnginesObj", (result) => {
-      searchEngines = result.searchEnginesObj ?? {
-        targetWindow: '_blank',
-        openAsUrl: true,
-        incognitoMode: false,
-        enableMultiAlias: false
-      };
-
-      resolve();
-    });
+  return browser.storage.sync.get("searchEnginesObj").then((result) => {
+    searchEngines = result.searchEnginesObj ?? {
+      targetWindow: '_blank',
+      openAsUrl: true,
+      incognitoMode: false,
+      enableMultiAlias: false
+    };
   });
 };
 
@@ -77,7 +79,7 @@ async function openPopup() {
   const activeAliasElement = popupContainer.shadowRoot.querySelector('#active-alias');
 
   if (searchEngines.prefillUrl) {
-    chrome.runtime.sendMessage({ action: 'getCurrentTabUrl' }, (response) => {
+    browser.runtime.sendMessage({ action: 'getCurrentTabUrl' }, (response) => {
       const currentTabUrl = response.url || '';
       if (currentTabUrl) userInputElement.value = currentTabUrl;
     });
@@ -105,7 +107,7 @@ async function openPopup() {
 }
 
 const sendOpenTabsEvent = (urls) => {
-  chrome.runtime.sendMessage({
+  browser.runtime.sendMessage({
     action: "openTabs",
     urls: urls,
   });

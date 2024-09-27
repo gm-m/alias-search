@@ -1,7 +1,7 @@
 let searchEngines = {};
 
 function loadSavedData() {
-    chrome.storage.sync.get("searchEnginesObj", (result) => {
+    browser.storage.sync.get("searchEnginesObj").then((result) => {
         searchEngines = result.searchEnginesObj ?? {
             targetWindow: '_blank',
             openAsUrl: true,
@@ -22,7 +22,7 @@ function saveSettings() {
     searchEngines.enableMultiAlias = document.getElementById('tab-settings-enable-multi-alias').checked;
     searchEngines.prefillUrl = document.getElementById('tab-settings-prefill-url').checked;
 
-    chrome.storage.sync.set({ "searchEnginesObj": searchEngines });
+    browser.storage.sync.set({ "searchEnginesObj": searchEngines });
 }
 
 function addAliasToDom(searchEnginesObj) {
@@ -62,12 +62,12 @@ function updateAlias(div) {
     searchEngines.alias[name].hasPlaceholder = hasPlaceholder;
     div.querySelector('#alias-placeholder').checked = hasPlaceholder;
 
-    chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => { });
+    browser.storage.sync.set({ "searchEnginesObj": searchEngines }, () => { });
 }
 
 function deleteAlias(name) {
     searchEngines.alias = Object.fromEntries(Object.entries(searchEngines.alias).filter(([key]) => key !== name));
-    chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
+    browser.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
         document.getElementById(name).remove();
         showData(hasAliases(searchEngines));
     });
@@ -119,7 +119,7 @@ function createNewAlias() {
 
     searchEngines.alias[aliasName] = newAlias;
 
-    chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
+    browser.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
         addAliasToDom({ ...newAlias, name: aliasName });
         showData(true);
     });
@@ -127,7 +127,7 @@ function createNewAlias() {
 
 function clearData() {
     if (confirm("Do you really want to delete all aliases?") === true) {
-        chrome.storage.sync.clear();
+        browser.storage.sync.clear();
         searchEngines = {};
 
         showData(false);
@@ -158,7 +158,7 @@ document.getElementById("btn-import-json").onchange = ({ target }) => {
             searchEngines = fileContent;
             searchEngines.alias = mergedAliases;
 
-            chrome.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
+            browser.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
                 loadSavedData();
             });
         });
