@@ -150,10 +150,12 @@ const parseAliases = (inputText) => {
   let searchQuery = '';
 
   for (const word of words) {
+    if (!word && !searchQuery) continue; // Skip empty spaces unless they're part of the search query
+
     const tabOptions = getTabOptions(word);
     const cleanWord = word.replace(/^[!@]+/, '');
 
-    if (searchEngines.alias.hasOwnProperty(cleanWord)) {
+    if (searchEngines.alias.hasOwnProperty(cleanWord)) { // Handle
       if (!searchEngines.enableMultiAlias && aliases.length) {
         searchQuery = words.slice(words.indexOf(word)).join(' ');
         break;
@@ -170,6 +172,7 @@ const parseAliases = (inputText) => {
         }
       }
       searchQuery = words.slice(words.indexOf(word)).join(' ');
+
       break;
     }
   }
