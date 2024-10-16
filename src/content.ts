@@ -1,3 +1,6 @@
+//@ts-nocheck
+import browser from "webextension-polyfill";
+
 browser.runtime.onMessage.addListener((message) => {
   if (message.action === "openPopup") {
     openPopup();
@@ -155,7 +158,7 @@ const parseAliases = (inputText) => {
     const tabOptions = getTabOptions(word);
     const cleanWord = word.replace(/^[!@]+/, '');
 
-    if (searchEngines.alias.hasOwnProperty(cleanWord)) { // Handle
+    if (searchEngines.alias.hasOwnProperty(cleanWord)) {
       if (!searchEngines.enableMultiAlias && aliases.length) {
         searchQuery = words.slice(words.indexOf(word)).join(' ');
         break;
@@ -164,7 +167,7 @@ const parseAliases = (inputText) => {
       aliases.push({ alias: cleanWord, ...tabOptions });
       aliasDescriptions.add(searchEngines.alias[cleanWord].searchEngine);
 
-    } else { // Check if the word matches any category
+    } else { // If no alias are found, check if the word matches any category
       for (const alias in searchEngines.alias) {
         if (searchEngines.alias[alias].categories && searchEngines.alias[alias].categories.includes(cleanWord)) {
           categories.push(cleanWord);

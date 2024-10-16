@@ -1,4 +1,30 @@
-let searchEngines = {};
+// @ts-nocheck
+import browser from "webextension-polyfill";
+
+type SearchEngine = {
+    alias?: Alias,
+    enableMultiAlias: boolean,
+    incognitoMode: boolean,
+    openAsUrl: boolean,
+    prefillUrl: boolean,
+    targetWindow: "_blank" | "_self";
+};
+
+type AliasProperties = {
+    categories: string[] | null,
+    hasPlaceholder: boolean,
+    searchEngine: string,
+    url: string;
+};
+
+type Alias = {
+    [key: string]: AliasProperties;
+};
+
+type ActiveAlias = { "name": string; } & AliasProperties;
+
+// let searchEngines: Partial<SearchEngine> = {};
+let searchEngines: SearchEngine = {};
 
 function loadSavedData() {
     browser.storage.sync.get("searchEnginesObj").then((result) => {
@@ -14,19 +40,36 @@ function loadSavedData() {
     });
 }
 
+function getHtmlInputElById(id: string) {
+    return document.getElementById(id) as HTMLInputElement | null;
+}
+
+function isChecked(id: string) {
+    const checkbox = getHtmlInputElById(id);
+    return checkbox ? checkbox.checked : false;
+}
+
+function setCheckboxValue(el: HTMLInputElement | null, value: boolean) {
+    if (el) el.checked = value;
+}
+
 function saveSettings() {
-    if (!searchEngines) searchEngines = {};
-    searchEngines.targetWindow = document.getElementById('tab-settings-target-windows').checked ? '_blank' : '_self';
-    searchEngines.openAsUrl = document.getElementById('tab-settings-open-as-url').checked;
-    searchEngines.incognitoMode = document.getElementById('tab-settings-open-incognito-mode').checked;
-    searchEngines.enableMultiAlias = document.getElementById('tab-settings-enable-multi-alias').checked;
-    searchEngines.prefillUrl = document.getElementById('tab-settings-prefill-url').checked;
+    if (!searchEngines) {
+        searchEngines = {
+            targetWindow: isChecked('tab-settings-target-windows') ? '_blank' : '_self',
+            openAsUrl: isChecked('tab-settings-open-as-url'),
+            incognitoMode: isChecked('tab-settings-open-incognito-mode'),
+            enableMultiAlias: isChecked('tab-settings-enable-multi-alias'),
+            prefillUrl: isChecked('tab-settings-prefill-url')
+        };
+    }
 
     browser.storage.sync.set({ "searchEnginesObj": searchEngines });
 }
 
-function addAliasToDom(searchEnginesObj) {
+function addAliasToDom(searchEnginesObj: ActiveAlias) {
     const { name, searchEngine, url, hasPlaceholder, categories } = searchEnginesObj;
+
     const aliasDiv = document.createElement('div');
     aliasDiv.id = name;
     aliasDiv.className = "active-alias d-flex flex-column col-4 gap-2 mb-5";
@@ -48,37 +91,40 @@ function addAliasToDom(searchEnginesObj) {
 
     aliasDiv.querySelectorAll('button')[0].addEventListener("click", updateAlias.bind(this, aliasDiv), false);
     aliasDiv.querySelectorAll('button')[1].addEventListener("click", deleteAlias.bind(this, name), false);
-    aliasDiv.querySelector('#alias-placeholder').checked = hasPlaceholder;
+
+    const aliasPlaceholder = aliasDiv.querySelector('#alias-placeholder') as HTMLInputElement | null;
+    if (aliasPlaceholder) aliasPlaceholder.checked = hasPlaceholder;
 
     const divContainer = document.getElementById('display-content');
-    divContainer.appendChild(aliasDiv);
+    if (divContainer) divContainer.appendChild(aliasDiv);
 }
 
-function updateAlias(div) {
+function updateAlias(div: HTMLDivElement) {
     const [name, url] = [div.querySelector('#alias-name').value, div.querySelector('#alias-url').value];
-    const hasPlaceholder = url.includes("%s");
+    if (!(searchEngines.alias && searchEngines.alias[name])) return;
 
+    const hasPlaceholder = url.includes("%s");
     searchEngines.alias[name].url = url;
     searchEngines.alias[name].hasPlaceholder = hasPlaceholder;
     div.querySelector('#alias-placeholder').checked = hasPlaceholder;
 
-    browser.storage.sync.set({ "searchEnginesObj": searchEngines }, () => { });
+    browser.storage.sync.set({ "searchEnginesObj": searchEngines });
 }
 
-function deleteAlias(name) {
+function deleteAlias(name: string) {
     searchEngines.alias = Object.fromEntries(Object.entries(searchEngines.alias).filter(([key]) => key !== name));
-    browser.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
-        document.getElementById(name).remove();
+    browser.storage.sync.set({ "searchEnginesObj": searchEngines }).then(() => {
+        document.getElementById(name)?.remove();
         showData(hasAliases(searchEngines));
     });
 }
 
-function displayData(content) {
-    document.getElementById('tab-settings-target-windows').checked = searchEngines.targetWindow === '_blank';
-    document.getElementById('tab-settings-open-as-url').checked = searchEngines.openAsUrl;
-    document.getElementById('tab-settings-open-incognito-mode').checked = searchEngines.incognitoMode;
-    document.getElementById('tab-settings-enable-multi-alias').checked = searchEngines.enableMultiAlias;
-    document.getElementById('tab-settings-prefill-url').checked = searchEngines.prefillUrl;
+function displayData(content: SearchEngine) {
+    setCheckboxValue(getHtmlInputElById('tab-settings-target-windows'), searchEngines.targetWindow === '_blank');
+    setCheckboxValue(getHtmlInputElById('tab-settings-open-as-url'), searchEngines.openAsUrl);
+    setCheckboxValue(getHtmlInputElById('tab-settings-open-incognito-mode'), searchEngines.incognitoMode);
+    setCheckboxValue(getHtmlInputElById('tab-settings-enable-multi-alias'), searchEngines.enableMultiAlias);
+    setCheckboxValue(getHtmlInputElById('tab-settings-prefill-url'), searchEngines.prefillUrl);
 
     if (hasAliases(content)) {
         for (const key in searchEngines.alias) {
@@ -96,7 +142,7 @@ function displayData(content) {
     }
 }
 
-function showData(flag) {
+function showData(flag: boolean) {
     if (!flag) document.getElementById('display-content').innerHTML = '';
     document.getElementById('display-empty').style.display = flag ? 'none' : 'block';
     document.getElementById('btn-reset').style.display = flag ? 'block' : 'none';
@@ -119,7 +165,7 @@ function createNewAlias() {
 
     searchEngines.alias[aliasName] = newAlias;
 
-    browser.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
+    browser.storage.sync.set({ "searchEnginesObj": searchEngines }).then(() => {
         addAliasToDom({ ...newAlias, name: aliasName });
         showData(true);
     });
@@ -134,7 +180,7 @@ function clearData() {
     }
 }
 
-function displayCustomError(msg) {
+function displayCustomError(msg: string) {
     alert(msg);
     throw new Error(msg);
 }
@@ -145,10 +191,11 @@ function hasAliases(obj) {
 
 // EVENT LISTENERS
 
-document.getElementById("btn-add-new-alias").addEventListener("click", createNewAlias);
-document.getElementById("btn-save-settings").addEventListener("click", saveSettings);
+document.getElementById("btn-add-new-alias")?.addEventListener("click", createNewAlias);
+document.getElementById("btn-save-settings")?.addEventListener("click", saveSettings);
 
-document.getElementById("btn-reset").addEventListener("click", clearData);
+document.getElementById("btn-reset")?.addEventListener("click", clearData);
+
 document.getElementById("btn-import-json").onchange = ({ target }) => {
     const file = target.files[0];
 
@@ -158,13 +205,14 @@ document.getElementById("btn-import-json").onchange = ({ target }) => {
             searchEngines = fileContent;
             searchEngines.alias = mergedAliases;
 
-            browser.storage.sync.set({ "searchEnginesObj": searchEngines }, () => {
+            browser.storage.sync.set({ "searchEnginesObj": searchEngines }).then(() => {
                 loadSavedData();
             });
         });
     }
-}
-document.getElementById("btn-export-json").addEventListener("click", () => {
+};
+
+document.getElementById("btn-export-json")?.addEventListener("click", () => {
     if (hasAliases(searchEngines)) {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([JSON.stringify(searchEngines)], { type: 'application/json' }));

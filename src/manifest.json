@@ -1,0 +1,48 @@
+{
+  "{{chrome}}.manifest_version": 3,
+  "{{firefox}}.manifest_version": 2,
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "alias-search@yourdomain.com"
+    }
+  },
+  "icons": {
+    "16": "icon/16.png",
+    "32": "icon/32.png",
+    "48": "icon/48.png",
+    "96": "icon/96.png",
+    "128": "icon/128.png"
+  },
+  "background": {
+    "{{chrome}}.service_worker": "src/background.ts",
+    "{{firefox}}.scripts": [
+      "src/background.ts"
+    ]
+  },
+  "commands": {
+    "execute-code": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "Toggle Ext"
+    }
+  },
+  "permissions": [
+    "storage",
+    "declarativeContent",
+    "tabs",
+    "activeTab"
+  ],
+  "options_page": "src/options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content.ts"
+      ]
+    }
+  ]
+}
