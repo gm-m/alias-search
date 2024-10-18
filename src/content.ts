@@ -1,5 +1,7 @@
-//@ts-nocheck
+// @ts-nocheck
 import browser from "webextension-polyfill";
+import { getDefaultSearchEngines } from "./utility";
+import { AliasProperties } from "./options";
 
 browser.runtime.onMessage.addListener((message) => {
   if (message.action === "openPopup") {
@@ -12,12 +14,7 @@ let cachedSearchPayload = { aliases: [], aliasDescriptions: [], searchQuery: '' 
 
 const loadSearchEngines = () => {
   return browser.storage.sync.get("searchEnginesObj").then((result) => {
-    searchEngines = result.searchEnginesObj ?? {
-      targetWindow: '_blank',
-      openAsUrl: true,
-      incognitoMode: false,
-      enableMultiAlias: false
-    };
+    searchEngines = result.searchEnginesObj ?? getDefaultSearchEngines();
   });
 };
 
@@ -193,22 +190,31 @@ const getAliasDescription = () => {
   return `${aliasDescriptions.join(' - ')} | Target: ${searchEngines.targetWindow}`;
 };
 
+const getTargetUrl = (alias: AliasProperties, searchQuery: string): string => {
+  if (alias.type === "link") return alias.url;
+  const encodedSearchQuery = encodeURIComponent(searchQuery);
+  const placeholderUrl = alias.placeholderUrl.replace('%s', encodedSearchQuery);
+
+  if (alias.type === "placeholder") {
+    return placeholderUrl;
+  } else {
+    return searchQuery ? placeholderUrl : alias.url;
+  }
+}
+
 const handleUserInput = (e) => {
   const { aliases, searchQuery, categories } = cachedSearchPayload;
   const urls = new Set(); // Use a Set to avoid duplicate URLs
 
   const addUrl = (alias, tabOptions) => {
-    const targetUrl = alias.hasPlaceholder
-      ? alias.url.replace('%s', encodeURIComponent(searchQuery))
-      : alias.url;
-
+    const targetUrl = getTargetUrl(alias, searchQuery);
     urls.add({ url: targetUrl, ...tabOptions });
   };
 
   // Add URLs for aliases directly mentioned in the search query
   aliases.forEach(({ alias: aliasName, incognito, newTab }) => {
     const alias = searchEngines.alias[aliasName];
-    if (alias.hasPlaceholder && !searchQuery) return;
+    if (alias.type === "placeholder" && !searchQuery) return;
 
     addUrl(alias, { incognito, newTab });
   });

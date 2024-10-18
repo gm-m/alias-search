@@ -1,5 +1,6 @@
 // @ts-nocheck
 import browser from "webextension-polyfill";
+import { getDefaultSearchEngines } from "./utility";
 
 type SearchEngine = {
     alias?: Alias,
@@ -10,10 +11,11 @@ type SearchEngine = {
     targetWindow: "_blank" | "_self";
 };
 
-type AliasProperties = {
+export type AliasProperties = {
     categories: string[] | null,
-    hasPlaceholder: boolean,
+    type: "placeholder" | "link" | "multi";
     searchEngine: string,
+    placeholderUrl: string | null,
     url: string;
 };
 
@@ -28,14 +30,7 @@ let searchEngines: SearchEngine = {};
 
 function loadSavedData() {
     browser.storage.sync.get("searchEnginesObj").then((result) => {
-        searchEngines = result.searchEnginesObj ?? {
-            targetWindow: '_blank',
-            openAsUrl: true,
-            incognitoMode: false,
-            enableMultiAlias: false,
-            prefillUrl: false
-        };
-
+        searchEngines = result.searchEnginesObj ?? getDefaultSearchEngines();
         displayData(searchEngines);
     });
 }
@@ -54,21 +49,28 @@ function setCheckboxValue(el: HTMLInputElement | null, value: boolean) {
 }
 
 function saveSettings() {
-    if (!searchEngines) {
-        searchEngines = {
-            targetWindow: isChecked('tab-settings-target-windows') ? '_blank' : '_self',
-            openAsUrl: isChecked('tab-settings-open-as-url'),
-            incognitoMode: isChecked('tab-settings-open-incognito-mode'),
-            enableMultiAlias: isChecked('tab-settings-enable-multi-alias'),
-            prefillUrl: isChecked('tab-settings-prefill-url')
-        };
-    }
+    searchEngines.targetWindow = isChecked('tab-settings-target-windows') ? '_blank' : '_self';
+    searchEngines.openAsUrl = isChecked('tab-settings-open-as-url');
+    searchEngines.incognitoMode = isChecked('tab-settings-open-incognito-mode');
+    searchEngines.enableMultiAlias = isChecked('tab-settings-enable-multi-alias');
+    searchEngines.prefillUrl = isChecked('tab-settings-prefill-url');
 
     browser.storage.sync.set({ "searchEnginesObj": searchEngines });
 }
 
+function getActiveAliasUrls(alias: ActiveAlias) {
+    if (alias.type === "placeholder") {
+        return alias.placeholderUrl;
+    } else if (alias.type === "link") {
+        return alias.url;
+    } else {
+        return `${alias.url} | ${alias.placeholderUrl}`;
+    }
+}
+
 function addAliasToDom(searchEnginesObj: ActiveAlias) {
-    const { name, searchEngine, url, hasPlaceholder, categories } = searchEnginesObj;
+    const { name, searchEngine, url, type, categories } = searchEnginesObj;
+    const activeAliasUrls = getActiveAliasUrls(searchEnginesObj);
 
     const aliasDiv = document.createElement('div');
     aliasDiv.id = name;
@@ -76,11 +78,18 @@ function addAliasToDom(searchEnginesObj: ActiveAlias) {
     aliasDiv.innerHTML = `
     <input class="extended-name form-control" name="${searchEngine}" value="${searchEngine}" autocomplete="off" readonly>
     <input id="alias-name" class="name form-control" name="${name}" value="${name}" autocomplete="off" readonly>
-    <input id="alias-url" autocomplete="off" class="value form-control" name="${url}" value="${url}">
+    <input id="alias-url" autocomplete="off" class="value form-control" name="${url}" value="${activeAliasUrls}">
     <input id="alias-category" autocomplete="off" class="value form-control" value="${categories || 'No categories'}" readonly>
-    <div class="form-check form-switch form-switch-xl">
-        <input id="alias-placeholder" class="form-check-input" type="checkbox" disabled>
-        <label class="form-check-label" for="alias-placeholder">Placeholder</label>
+    <div class="form-check form-switch form-switch-xl d-flex">
+        <div class="col-6">
+            <input id="alias-placeholder" class="form-check-input" type="checkbox" disabled>
+            <label class="form-check-label" for="alias-placeholder">Placeholder</label>
+        </div>
+
+        <div class="col-6">
+            <input id="alias-link" class="form-check-input" type="checkbox" disabled>
+            <label class="form-check-label" for="alias-link">Direct Link</label>
+        </div>
     </div>
 
     <div class="d-flex gap-5">
@@ -93,7 +102,10 @@ function addAliasToDom(searchEnginesObj: ActiveAlias) {
     aliasDiv.querySelectorAll('button')[1].addEventListener("click", deleteAlias.bind(this, name), false);
 
     const aliasPlaceholder = aliasDiv.querySelector('#alias-placeholder') as HTMLInputElement | null;
-    if (aliasPlaceholder) aliasPlaceholder.checked = hasPlaceholder;
+    if (aliasPlaceholder) aliasPlaceholder.checked = type === "placeholder" | type === "multi";
+
+    const aliasDirectLink = aliasDiv.querySelector('#alias-link') as HTMLInputElement | null;
+    if (aliasDirectLink) aliasDirectLink.checked = type === "link" | type === "multi";
 
     const divContainer = document.getElementById('display-content');
     if (divContainer) divContainer.appendChild(aliasDiv);
@@ -103,11 +115,11 @@ function updateAlias(div: HTMLDivElement) {
     const [name, url] = [div.querySelector('#alias-name').value, div.querySelector('#alias-url').value];
     if (!(searchEngines.alias && searchEngines.alias[name])) return;
 
-    const hasPlaceholder = url.includes("%s");
+    const aliasType = getAliasType(url);
     searchEngines.alias[name].url = url;
-    searchEngines.alias[name].hasPlaceholder = hasPlaceholder;
-    div.querySelector('#alias-placeholder').checked = hasPlaceholder;
+    searchEngines.alias[name].type = aliasType;
 
+    div.querySelector('#alias-placeholder').checked = aliasType === "placeholder";
     browser.storage.sync.set({ "searchEnginesObj": searchEngines });
 }
 
@@ -119,20 +131,23 @@ function deleteAlias(name: string) {
     });
 }
 
-function displayData(content: SearchEngine) {
+function displaySettings() {
     setCheckboxValue(getHtmlInputElById('tab-settings-target-windows'), searchEngines.targetWindow === '_blank');
     setCheckboxValue(getHtmlInputElById('tab-settings-open-as-url'), searchEngines.openAsUrl);
     setCheckboxValue(getHtmlInputElById('tab-settings-open-incognito-mode'), searchEngines.incognitoMode);
     setCheckboxValue(getHtmlInputElById('tab-settings-enable-multi-alias'), searchEngines.enableMultiAlias);
     setCheckboxValue(getHtmlInputElById('tab-settings-prefill-url'), searchEngines.prefillUrl);
+}
 
+function displayActiveAliases(content: SearchEngine) {
     if (hasAliases(content)) {
         for (const key in searchEngines.alias) {
             addAliasToDom({
                 name: key,
                 searchEngine: searchEngines.alias[key].searchEngine,
                 url: searchEngines.alias[key].url,
-                hasPlaceholder: searchEngines.alias[key].hasPlaceholder,
+                placeholderUrl: searchEngines.alias[key].placeholderUrl,
+                type: searchEngines.alias[key].type,
                 categories: searchEngines.alias[key].categories
             });
         }
@@ -142,31 +157,55 @@ function displayData(content: SearchEngine) {
     }
 }
 
+function displayData(content: SearchEngine) {
+    displaySettings();
+    displayActiveAliases(content);
+}
+
 function showData(flag: boolean) {
     if (!flag) document.getElementById('display-content').innerHTML = '';
     document.getElementById('display-empty').style.display = flag ? 'none' : 'block';
     document.getElementById('btn-reset').style.display = flag ? 'block' : 'none';
 }
 
+function getAliasType(url: string): Omit<AliasProperties['type'], "multi"> {
+    return url.includes("%s") ? "placeholder" : "link";
+}
+
+function updateAliasCheckboxes(aliasName: string) {
+    const aliasDiv = document.getElementById(aliasName);
+
+    if (aliasDiv) {
+        aliasDiv.querySelectorAll('.form-check input').forEach(checkbox => {
+            setCheckboxValue(checkbox, true);
+        });
+    }
+}
+
 function createNewAlias() {
-    const aliasUrlDomEl = document.getElementById('url');
+    const aliasUrl = document.getElementById('url').value;
     const aliasCategories = document.getElementById('categories').value;
     const aliasName = document.getElementById('alias').value;
     const newAlias = {
         searchEngine: document.getElementById('search-engine').value,
-        url: aliasUrlDomEl.value,
-        hasPlaceholder: aliasUrlDomEl.value && aliasUrlDomEl.value.includes("%s"),
+        type: getAliasType(aliasUrl),
         categories: aliasCategories ? aliasCategories.split(',').map(cat => cat.trim()) : null
     };
 
-    if (!aliasName || !newAlias.url) displayCustomError("Fill all data");
-    if (!hasAliases(searchEngines)) searchEngines = { alias: {} };
-    if (searchEngines.alias.hasOwnProperty(aliasName)) displayCustomError("An alias with same name already exists");
+    if (!aliasName || !aliasUrl) displayCustomError("Fill all data");
+    if (searchEngines.alias.hasOwnProperty(aliasName)) {
+        if (searchEngines.alias[aliasName].type === newAlias.type) {
+            displayCustomError("An alias with same name already exists");
+        } else { // Support multiple alias with the same name if they're different
+            newAlias.type = "multi";
+        }
+    }
 
+    newAlias.type === "placeholder" ? newAlias.placeholderUrl = aliasUrl : newAlias.url = aliasUrl;
     searchEngines.alias[aliasName] = newAlias;
 
     browser.storage.sync.set({ "searchEnginesObj": searchEngines }).then(() => {
-        addAliasToDom({ ...newAlias, name: aliasName });
+        newAlias.type === "multi" ? updateAliasCheckboxes(aliasName) : addAliasToDom({ ...newAlias, name: aliasName });
         showData(true);
     });
 }
@@ -206,7 +245,7 @@ document.getElementById("btn-import-json").onchange = ({ target }) => {
             searchEngines.alias = mergedAliases;
 
             browser.storage.sync.set({ "searchEnginesObj": searchEngines }).then(() => {
-                loadSavedData();
+                displayData(searchEngines);
             });
         });
     }
