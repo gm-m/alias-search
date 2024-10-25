@@ -1,7 +1,7 @@
 // @ts-nocheck
 import browser from "webextension-polyfill";
 import { getDefaultSearchEngines } from "./utility";
-import { AliasProperties } from "./options";
+import { AliasProperties, SearchEngine } from "./_options";
 
 browser.runtime.onMessage.addListener((message) => {
   if (message.action === "openPopup") {
@@ -9,12 +9,12 @@ browser.runtime.onMessage.addListener((message) => {
   }
 });
 
-let searchEngines = {};
+let searchEngines: SearchEngine = getDefaultSearchEngines();
 let cachedSearchPayload = { aliases: [], aliasDescriptions: [], searchQuery: '' };
 
 const loadSearchEngines = () => {
   return browser.storage.sync.get("searchEnginesObj").then((result) => {
-    searchEngines = result.searchEnginesObj ?? getDefaultSearchEngines();
+    if (result) searchEngines = result.searchEnginesObj;
   });
 };
 
@@ -106,14 +106,14 @@ async function openPopup() {
   }, { capture: true });
 }
 
-const sendOpenTabsEvent = (urls) => {
+const sendOpenTabsEvent = (urls: any[]) => {
   browser.runtime.sendMessage({
     action: "openTabs",
     urls: urls,
   });
 };
 
-const getTabOptions = (word) => {
+const getTabOptions = (word: string) => {
   const settings = {
     incognito: searchEngines.incognitoMode,
     newTab: searchEngines.targetWindow
@@ -141,7 +141,7 @@ const getTabOptions = (word) => {
   return settings;
 };
 
-const parseAliases = (inputText) => {
+const parseAliases = (inputText: string) => {
   const words = inputText.split(' ');
   const aliases = [];
   const aliasDescriptions = new Set();

@@ -1,4 +1,6 @@
-export const getDefaultSearchEngines = () => {
+import { SearchEngine } from "./services/types";
+
+export const getDefaultSearchEngines = (): SearchEngine => {
     return {
         alias: {},
         targetWindow: '_blank',
