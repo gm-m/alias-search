@@ -5,17 +5,17 @@ import { DomHelpers } from "./ui/dom-helpers";
 
 class Options {
     private searchEngineService: SearchEngineService;
-    private aliasUI: SettingsUI;
+    private settingsUI: SettingsUI;
 
     constructor() {
         this.searchEngineService = new SearchEngineService();
-        this.aliasUI = new SettingsUI(this.searchEngineService);
+        this.settingsUI = new SettingsUI(this.searchEngineService);
         this.initializeEventListeners();
     }
 
     private async initialize(): Promise<void> {
         const searchEngines = await this.searchEngineService.loadSavedData();
-        this.aliasUI.displayData(searchEngines);
+        this.settingsUI.displayData(searchEngines);
     }
 
     private initializeEventListeners(): void {
@@ -35,10 +35,10 @@ class Options {
     }
 
     private async handleCreateNewAlias(): Promise<void> {
-        const urlInput = DomHelpers.getInputElement('url');
-        const categoriesInput = DomHelpers.getInputElement('categories');
-        const aliasInput = DomHelpers.getInputElement('alias');
-        const searchEngineInput = DomHelpers.getInputElement('search-engine');
+        const urlInput = DomHelpers.getInputElementById('url');
+        const categoriesInput = DomHelpers.getInputElementById('categories');
+        const aliasInput = DomHelpers.getInputElementById('alias');
+        const searchEngineInput = DomHelpers.getInputElementById('search-engine');
 
         if (!urlInput?.value || !aliasInput?.value || !searchEngineInput?.value) {
             return;
@@ -53,15 +53,15 @@ class Options {
             );
 
             if (newAlias.type === "multi") {
-                this.aliasUI.updateMultiAliasCheckboxes(aliasInput.value);
+                this.settingsUI.updateMultiAliasCheckboxes(aliasInput.value);
             } else {
-                this.aliasUI.addAliasToDom({
+                this.settingsUI.addAliasToDom({
                     ...newAlias,
                     name: aliasInput.value
                 });
             }
 
-            this.aliasUI.updateUIVisibility(true);
+            this.settingsUI.updateUIVisibility(true);
         } catch (error: any) {
             alert(error.message);
         }
@@ -82,7 +82,7 @@ class Options {
     private async handleClearData(): Promise<void> {
         if (confirm("Do you really want to delete all aliases?")) {
             await this.searchEngineService.clearAllAliases();
-            this.aliasUI.updateUIVisibility(false);
+            this.settingsUI.updateUIVisibility(false);
         }
     }
 
@@ -95,7 +95,7 @@ class Options {
                 const fileContent = await new Response(file).json();
                 await this.searchEngineService.importAliases(fileContent);
                 const updatedSearchEngines = await this.searchEngineService.loadSavedData();
-                this.aliasUI.displayData(updatedSearchEngines);
+                this.settingsUI.displayData(updatedSearchEngines);
             } catch (error: any) {
                 alert(`Error importing file: ${error.message}`);
             }

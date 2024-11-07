@@ -1,15 +1,10 @@
 import browser from "webextension-polyfill";
+import { UrlWithOptions } from "./services/types";
 
 type Message = {
-    "action": "openTabs" | "getCurrentTabUrl",
-    "urls": TabOption[]
-}
-
-type TabOption = {
-    url: string,
-    incognito: boolean;
-    newTab: "_blank" | "_self";
-}
+    action: "openTabs" | "getCurrentTabUrl",
+    urls: UrlWithOptions[];
+};
 
 browser.commands.onCommand.addListener(function (command) {
     if (command === 'execute-code') {
@@ -32,8 +27,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 function handleOpenTabs(message: Message) {
     const { urls } = message;
-    const createTabsInWindow = (windowId: number, urlObj: TabOption) => {
-        if (urlObj.newTab === '_blank') {
+    const createTabsInWindow = (windowId: number, urlObj: UrlWithOptions) => {
+        if (urlObj.newTab) {
             browser.tabs.create({ url: urlObj.url, windowId, active: true });
         } else {
             browser.windows.update(windowId, { focused: true });

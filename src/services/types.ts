@@ -20,3 +20,33 @@ export type Alias = {
 };
 
 export type ActiveAlias = { "name": string; } & AliasProperties;
+
+export interface SearchPayload {
+    aliases: ParsedAlias[];
+    aliasDescriptions: string[];
+    searchQuery: string;
+    categories: string[];
+}
+
+export interface TabOptions {
+    incognito: boolean;
+    newTab: boolean;
+}
+
+export interface ParsedAlias extends TabOptions {
+    alias: string;
+}
+
+export interface UrlWithOptions extends TabOptions {
+    url: string;
+}
+
+export interface CurrentTabUrl {
+    url: string;
+}
+
+export interface PopupElements {
+    container: HTMLDivElement;
+    userInput: HTMLInputElement;
+    activeAlias: HTMLSpanElement;
+}

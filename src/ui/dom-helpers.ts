@@ -1,15 +1,15 @@
 export class DomHelpers {
-    static getInputElement(id: string): HTMLInputElement | null {
+    static getInputElementById(id: string): HTMLInputElement | null {
         return document.getElementById(id) as HTMLInputElement | null;
     }
 
     static isChecked(id: string): boolean {
-        const checkbox = this.getInputElement(id);
+        const checkbox = this.getInputElementById(id);
         return checkbox ? checkbox.checked : false;
     }
 
     static setCheckboxValue(id: string, value: boolean): void {
-        const checkbox = this.getInputElement(id);
+        const checkbox = this.getInputElementById(id);
         if (checkbox) checkbox.checked = value;
     }
 
