@@ -69,7 +69,6 @@ export class SearchHandler {
 
     private getTargetUrl(alias: AliasProperties, searchQuery: string): string {
         if (alias.type === "link") return alias.url;
-
         if (!searchQuery && alias.type !== "placeholder") return alias.url;
 
         return alias.placeholderUrl!.replace('%s', encodeURIComponent(searchQuery));

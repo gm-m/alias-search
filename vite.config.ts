@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from 'vitest/config';
 import webExtension, { readJsonFile } from "vite-plugin-web-extension";
 
 function generateManifest() {
@@ -20,4 +20,9 @@ export default defineConfig({
       browser: process.env.TARGET || "chrome",
     }),
   ],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./test/setup.ts'],
+    globals: true
+  }
 });
