@@ -1,6 +1,7 @@
 export type SearchEngine = {
     alias: Alias;
     enableMultiAlias: boolean;
+    defaultAlias: string;
     incognitoMode: boolean;
     openAsUrl: boolean;
     prefillUrl: boolean;
@@ -19,7 +20,7 @@ export type Alias = {
     [key: string]: AliasProperties;
 };
 
-export type ActiveAlias = { "name": string; } & AliasProperties;
+export type ActiveAlias = { "name": string; defaultAlias: SearchEngine['defaultAlias']; } & AliasProperties;
 
 export interface SearchPayload {
     aliases: ParsedAlias[];

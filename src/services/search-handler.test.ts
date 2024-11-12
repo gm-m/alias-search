@@ -43,6 +43,7 @@ describe('SearchHandler', () => {
           }
         },
         enableMultiAlias: true,
+        defaultAlias: '',
         incognitoMode: false,
         openAsUrl: true,
         prefillUrl: false,
@@ -79,6 +80,7 @@ describe('SearchHandler', () => {
           }
         },
         enableMultiAlias: true,
+        defaultAlias: '',
         incognitoMode: false,
         openAsUrl: true,
         prefillUrl: false,
@@ -106,6 +108,7 @@ describe('SearchHandler', () => {
         },
         enableMultiAlias: true,
         incognitoMode: false,
+        defaultAlias: '',
         openAsUrl: true,
         prefillUrl: false,
         targetWindow: '_blank'

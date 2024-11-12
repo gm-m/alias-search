@@ -56,8 +56,9 @@ class Options {
                 this.settingsUI.updateMultiAliasCheckboxes(aliasInput.value);
             } else {
                 this.settingsUI.addAliasToDom({
+                    name: aliasInput.value,
+                    defaultAlias: '',
                     ...newAlias,
-                    name: aliasInput.value
                 });
             }
 

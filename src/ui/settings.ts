@@ -1,5 +1,6 @@
 import { SearchEngineService } from '../services/search-engine.service';
-import { ActiveAlias, AliasProperties, SearchEngine } from '../services/types';
+import { ActiveAlias, SearchEngine } from '../services/types';
+import { getIndexOfExactMatch } from '../utility';
 import { DomHelpers } from './dom-helpers';
 
 export class SettingsUI {
@@ -27,11 +28,8 @@ export class SettingsUI {
             for (const key in content.alias) {
                 this.addAliasToDom({
                     name: key,
-                    searchEngine: content.alias[key].searchEngine,
-                    url: content.alias[key].url,
-                    placeholderUrl: content.alias[key].placeholderUrl,
-                    type: content.alias[key].type,
-                    categories: content.alias[key].categories
+                    defaultAlias: content.defaultAlias,
+                    ...content.alias[key]
                 });
             }
             this.updateUIVisibility(true);
@@ -40,7 +38,7 @@ export class SettingsUI {
         }
     }
 
-    getActiveAliasUrls(alias: ActiveAlias): string | null {
+    private getActiveAliasUrls(alias: ActiveAlias): string | null {
         if (alias.type === "placeholder") {
             return alias.placeholderUrl;
         } else if (alias.type === "link") {
@@ -51,7 +49,7 @@ export class SettingsUI {
     }
 
     addAliasToDom(searchEnginesObj: ActiveAlias): void {
-        const { name, searchEngine, url, type, categories } = searchEnginesObj;
+        const { name, searchEngine, url, type, defaultAlias, categories } = searchEnginesObj;
         const activeAliasUrls = this.getActiveAliasUrls(searchEnginesObj);
 
         const aliasDiv = document.createElement('div');
@@ -63,14 +61,19 @@ export class SettingsUI {
         <input id="alias-url" autocomplete="off" class="value form-control" name="${url}" value="${activeAliasUrls}">
         <input id="alias-category" autocomplete="off" class="value form-control" value="${categories || 'No categories'}" readonly>
         <div class="form-check form-switch form-switch-xl d-flex">
-            <div class="col-6">
+            <div class="col-4">
                 <input id="alias-placeholder" class="form-check-input" type="checkbox" disabled>
                 <label class="form-check-label" for="alias-placeholder">Placeholder</label>
             </div>
 
-            <div class="col-6">
+            <div class="col-4">
                 <input id="alias-link" class="form-check-input" type="checkbox" disabled>
                 <label class="form-check-label" for="alias-link">Direct Link</label>
+            </div>
+
+            <div class="col-4">
+                <input id="default-alias" class="form-check-input" type="checkbox">
+                <label class="form-check-label" for="default-alias">Default Alias</label>
             </div>
         </div>
 
@@ -81,7 +84,7 @@ export class SettingsUI {
         `;
 
         this.attachAliasEventListeners(aliasDiv, name);
-        this.updateAliasCheckboxes(aliasDiv, type);
+        this.updateAliasCheckboxes(aliasDiv, type, getIndexOfExactMatch(name, defaultAlias) !== null);
 
         const divContainer = document.getElementById('display-content');
         if (divContainer) divContainer.appendChild(aliasDiv);
@@ -100,16 +103,21 @@ export class SettingsUI {
         }
     }
 
-    private updateAliasCheckboxes(aliasDiv: HTMLElement, type: AliasProperties['type']): void {
-        const aliasPlaceholder = aliasDiv.querySelector('#alias-placeholder') as HTMLInputElement;
-        const aliasDirectLink = aliasDiv.querySelector('#alias-link') as HTMLInputElement;
+    private updateAliasCheckboxes(aliasDiv: HTMLElement, type: ActiveAlias['type'], isDefaultAlias: boolean): void {
+        const placeholder = aliasDiv.querySelector('#alias-placeholder') as HTMLInputElement;
+        const directLink = aliasDiv.querySelector('#alias-link') as HTMLInputElement;
+        const defaultAliasDomEl = aliasDiv.querySelector('#default-alias') as HTMLInputElement;
 
-        if (aliasPlaceholder) {
-            aliasPlaceholder.checked = type === "placeholder" || type === "multi";
+        if (placeholder) {
+            placeholder.checked = type === "placeholder" || type === "multi";
         }
 
-        if (aliasDirectLink) {
-            aliasDirectLink.checked = type === "link" || type === "multi";
+        if (directLink) {
+            directLink.checked = type === "link" || type === "multi";
+        }
+
+        if (defaultAliasDomEl) {
+            defaultAliasDomEl.checked = isDefaultAlias;
         }
     }
 
@@ -128,9 +136,10 @@ export class SettingsUI {
     private async handleUpdateAlias(div: HTMLElement): Promise<void> {
         const nameInput = div.querySelector('#alias-name') as HTMLInputElement;
         const urlInput = div.querySelector('#alias-url') as HTMLInputElement;
+        const defaultAliasInput = div.querySelector('#default-alias') as HTMLInputElement;
 
         if (nameInput && urlInput) {
-            await this.searchEngineService.updateAlias(nameInput.value, urlInput.value);
+            await this.searchEngineService.updateAlias(nameInput.value, urlInput.value, defaultAliasInput.checked);
         }
     }
 

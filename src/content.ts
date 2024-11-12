@@ -32,6 +32,9 @@ class SearchApplication {
 
     this.setupEventListeners(elements);
     document.body.appendChild(elements.container);
+
+    const userInputTxtLen = elements.userInput.value.length;
+    elements.userInput.setSelectionRange(userInputTxtLen, userInputTxtLen);
     elements.userInput.focus();
   }
 

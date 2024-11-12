@@ -39,7 +39,7 @@ export class PopupUI {
     popup.innerHTML = `
       <div id="modal">
         <span class="searchicon">&#x1F50E;&#xFE0E;</span>
-        <input type="text" id="user-input" placeholder="Search..." autocomplete="off">
+        <input type="text" id="user-input" placeholder="Search..." autocomplete="off" value="${searchEngines.defaultAlias ? searchEngines.defaultAlias : '' }">
       </div>
       <hr>
       <div id="preview-alias" class="p-0">

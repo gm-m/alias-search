@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import { AliasProperties, SearchEngine } from "./types";
-import { getDefaultSearchEngines } from "../utility";
+import { getDefaultSearchEngines, getIndexOfExactMatch } from "../utility";
 
 export class SearchEngineService {
     private searchEngines: SearchEngine = getDefaultSearchEngines();
@@ -14,7 +14,7 @@ export class SearchEngineService {
         return this.searchEngines;
     }
 
-    async saveSettings(settings: Omit<SearchEngine, 'alias'>): Promise<void> {
+    async saveSettings(settings: Omit<SearchEngine, 'alias' | 'defaultAlias'>): Promise<void> {
         Object.assign(this.searchEngines, settings);
         await browser.storage.sync.set({ "searchEnginesObj": this.searchEngines });
     }
@@ -52,12 +52,13 @@ export class SearchEngineService {
         return newAlias;
     }
 
-    async updateAlias(name: string, url: string): Promise<void> {
+    async updateAlias(name: string, url: string, isDefaultAsias: boolean): Promise<void> {
         if (!this.searchEngines.alias[name]) return;
 
         const aliasType = this.getAliasType(url);
         this.searchEngines.alias[name].url = url;
         this.searchEngines.alias[name].type = aliasType;
+        this.handleUpdateDefaultAlias(isDefaultAsias, name);
 
         await browser.storage.sync.set({ "searchEnginesObj": this.searchEngines });
     }
@@ -66,6 +67,8 @@ export class SearchEngineService {
         this.searchEngines.alias = Object.fromEntries(
             Object.entries(this.searchEngines.alias).filter(([key]) => key !== name)
         );
+        this.handleUpdateDefaultAlias(false, name);
+
         await browser.storage.sync.set({ "searchEnginesObj": this.searchEngines });
     }
 
@@ -91,5 +94,18 @@ export class SearchEngineService {
 
     private getAliasType(url: string) {
         return url.includes("%s") ? "placeholder" : "link";
+    }
+
+    private handleUpdateDefaultAlias(isDefaultAlias: boolean, currentAliasName: string) {
+        const idxOf = getIndexOfExactMatch(currentAliasName, this.searchEngines.defaultAlias);
+
+        if (idxOf !== null) {
+            this.searchEngines.defaultAlias = this.searchEngines.defaultAlias.slice(0, idxOf);
+            if (!isDefaultAlias) return;
+        }
+
+        if (isDefaultAlias && idxOf === null) {
+            this.searchEngines.defaultAlias ? this.searchEngines.defaultAlias += `${currentAliasName} ` : this.searchEngines.defaultAlias = `${currentAliasName} `;
+        }
     }
 }
