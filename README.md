@@ -37,7 +37,7 @@ The Alias Search Extension is a browser extension designed to enhance your web s
 
 - **Dynamic Search**: As you type in the search input, the extension dynamically suggests matching aliases and displays relevant information.
 - **Category Support**: Organize aliases into categories for easier management and retrieval.
-- **Default Alias Setting**: Option to set one or more aliases as default, allowing for quick access and streamlined searches based on frequently used terms.
+- **Default Alias**: Option to set one or more aliases as default, allowing for quick access and streamlined searches based on frequently used terms.
 
 ### Compatibility
 
@@ -61,4 +61,4 @@ This Extension is compatible with both Chromium-based browsers (e.g., Google Chr
 4. Click on "This Firefox" (in newer versions of Firefox) or "Load Temporary Add-on" (in older versions).
 5. Select the `manifest.json` file from the folder containing the extension files.
 
-Note: In Firefox, the extension will be loaded temporarily and will be removed when you restart the browser.
+**Note**: In Firefox, the extension will be loaded temporarily and will be removed when you restart the browser. To load the extension permanently, you will need to create a new directory for the extension and add the `manifest.json` file to it, then load the extension using the "Load Temporary Add-on" option.

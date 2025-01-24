@@ -18,3 +18,11 @@ export const getIndexOfExactMatch = (searchTerm: string, targetString: string): 
 
     return match ? match.index : null;
 };
+
+// Helper function to partition array into two groups
+export function partitionArray<T>(array: T[], predicate: (item: T) => boolean): [T[], T[]] {
+    const truthy: T[] = [], falsy: T[] = [];
+    array.forEach(item => (predicate(item) ? truthy : falsy).push(item));
+
+    return [truthy, falsy];
+}
