@@ -38,15 +38,16 @@ async function createTabsInWindow(windowId: number, urlObjs: UrlWithOptions[]) {
     await browser.windows.update(windowId, { focused: true });
 }
 
-async function findOrCreateIncognitoWindow(firstUrl: string): Promise<browser.Windows.Window> {
+async function findOrCreateIncognitoWindow(firstUrl: string): Promise<[browser.Windows.Window, isNewWindow: boolean]> {
     const windows = await browser.windows.getAll({ windowTypes: ['normal'] });
     const incognitoWindow = windows.find(window => window.incognito);
 
     if (incognitoWindow) {
-        return incognitoWindow;
+        return [incognitoWindow, false];
     }
 
-    return browser.windows.create({ url: firstUrl, incognito: true });
+    const newWindow = await browser.windows.create({ url: firstUrl, incognito: true });
+    return [newWindow, true];
 }
 
 async function findRegularWindow(): Promise<browser.Windows.Window> {
@@ -81,8 +82,12 @@ async function handleOpenTabs(message: Message) {
 
         // Handle incognito URLs
         if (incognitoUrls.length > 0) {
-            const incognitoWindow = await findOrCreateIncognitoWindow(incognitoUrls[0].url);
-            await createTabsInWindow(incognitoWindow.id!, incognitoUrls);
+            const [incognitoWindow, isNewWindow] = await findOrCreateIncognitoWindow(incognitoUrls[0].url);
+            // If it's a new window, skip the first URL as it's already opened
+            const urlsToOpen = isNewWindow ? incognitoUrls.slice(1) : incognitoUrls;
+            if (urlsToOpen.length > 0) {
+                await createTabsInWindow(incognitoWindow.id!, urlsToOpen);
+            }
         }
 
         // Handle regular URLs
