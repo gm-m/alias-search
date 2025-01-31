@@ -40,27 +40,31 @@ class SearchApplication {
 
   private setupEventListeners(elements: PopupElements): void {
     const { container, userInput, activeAlias } = elements;
+    const handleEscape = (e: KeyboardEvent) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        container.remove();
+        document.removeEventListener('keydown', handleEscape, true);
+      }
+    };
 
     userInput.addEventListener('keydown', (e) => e.stopPropagation());
+    userInput.addEventListener('keypress', (e) => e.stopPropagation());
     userInput.addEventListener('input', (e: Event) => {
       const target = e.target as HTMLInputElement;
       const payload = this.handler.parseAliases(target.value);
       this.state.setCachedPayload(payload);
       activeAlias.innerText = this.getAliasDescription();
     });
-
-    //@ts-ignore
-    container.shadowRoot?.querySelector("#modal")?.addEventListener('keyup', (e: KeyboardEvent) => {
+    userInput.addEventListener('keyup', (e: KeyboardEvent) => {
       e.stopPropagation();
       if (e.key === 'Enter') {
         this.handler.handleSearch(userInput.value);
+        document.removeEventListener('keydown', handleEscape, true);
         container.remove();
       }
     });
-
-    document.addEventListener("keydown", (e: KeyboardEvent) => {
-      if (e.key === 'Escape') container.remove();
-    }, { capture: true });
+    document.addEventListener("keydown", handleEscape, { capture: true });
   }
 
   private getAliasDescription(): string {
