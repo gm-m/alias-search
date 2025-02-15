@@ -117,8 +117,70 @@ describe('SearchHandler', () => {
       vi.spyOn(searchState, 'getSearchEngines').mockReturnValue(mockSearchEngines);
 
       const result = searchHandler.parseAliases('search test query');
-      expect(result.categories).toContain('search');
+      expect(result.categories).toHaveLength(1);
+      expect(result.categories[0]).toEqual({
+        category: 'search',
+        incognito: false,
+        newTab: true
+      });
       expect(result.aliasDescriptions).toContain('search (Category)');
+    });
+
+    it('should handle category-based aliases with tab options', () => {
+      const mockSearchEngines: SearchEngine = {
+        alias: {
+          'g': {
+            searchEngine: 'Google',
+            type: 'placeholder',
+            placeholderUrl: 'https://google.com/search?q=%s',
+            categories: ['search'],
+            url: ''
+          },
+          'yt': {
+            searchEngine: 'YouTube',
+            type: 'placeholder',
+            placeholderUrl: 'https://youtube.com/results?search_query=%s',
+            categories: ['search'],
+            url: ''
+          }
+        },
+        enableMultiAlias: true,
+        incognitoMode: false,
+        defaultAlias: '',
+        openAsUrl: true,
+        prefillUrl: false,
+        targetWindow: '_blank'
+      };
+
+      vi.spyOn(searchState, 'getSearchEngines').mockReturnValue(mockSearchEngines);
+
+      // Test incognito mode
+      const resultIncognito = searchHandler.parseAliases('!search test query');
+      console.log("Cat: ", resultIncognito.categories);
+      expect(resultIncognito.categories).toHaveLength(1);
+      expect(resultIncognito.categories[0]).toEqual({
+        category: 'search',
+        incognito: true,
+        newTab: true
+      });
+
+      // Test new tab
+      const resultNewTab = searchHandler.parseAliases('@search test query');
+      expect(resultNewTab.categories).toHaveLength(1);
+      expect(resultNewTab.categories[0]).toEqual({
+        category: 'search',
+        incognito: false,
+        newTab: true
+      });
+
+      // Test both incognito and new tab
+      const resultBoth = searchHandler.parseAliases('!@search test query');
+      expect(resultBoth.categories).toHaveLength(1);
+      expect(resultBoth.categories[0]).toEqual({
+        category: 'search',
+        incognito: true,
+        newTab: true
+      });
     });
   });
 });
