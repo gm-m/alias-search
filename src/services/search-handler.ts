@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import { SearchState } from "./search-state";
-import { AliasProperties, ParsedAlias, SearchPayload, TabOptions, UrlWithOptions } from "./types";
+import { AliasProperties, ParsedAlias, ParsedCategory, SearchPayload, TabOptions, UrlWithOptions } from "./types";
 
 const SETTINGS_MAP: Record<string, keyof TabOptions> = {
     '!': 'incognito',
@@ -18,6 +18,7 @@ export class SearchHandler {
 
         for (const [index, char] of [...word].entries()) {
             const settingKey = SETTINGS_MAP[char];
+            // Sets the property to true if the following character is different, and false if it is the same.
             if (settingKey) settings[settingKey] = word[index + 1] !== char;
         }
 
@@ -28,7 +29,7 @@ export class SearchHandler {
         const words = inputText.trim().split(' ').filter(Boolean);
         const aliases: ParsedAlias[] = [];
         const aliasDescriptions = new Set<string>();
-        const categories: string[] = [];
+        const categories: ParsedCategory[] = [];
         const searchEngines = this.state.getSearchEngines();
 
         let searchQuery = '';
@@ -52,7 +53,7 @@ export class SearchHandler {
             // Check categories
             const matchingCategories = Object.values(searchEngines.alias)
                 .filter(a => a.categories?.includes(cleanWord))
-                .map(() => cleanWord);
+                .length > 0 ? [{ category: cleanWord, ...tabOptions }] : [];
 
             if (matchingCategories.length) {
                 categories.push(...matchingCategories);
@@ -96,11 +97,15 @@ export class SearchHandler {
         // Process categories
         if (categories.length) {
             Object.values(searchEngines.alias)
-                .filter(alias => alias.categories?.some(category => categories.includes(category)))
-                .forEach(alias => urls.add({
-                    url: this.getTargetUrl(alias, query),
-                    ...defaultTabOptions
-                }));
+                .filter(alias => alias.categories?.some(category => categories.some(c => c.category === category)))
+                .forEach(alias => {
+                    const matchingCategory = categories.find(c => alias.categories!.includes(c.category))!;
+                    urls.add({
+                        url: this.getTargetUrl(alias, query),
+                        incognito: matchingCategory.incognito,
+                        newTab: matchingCategory.newTab
+                    });
+                });
         }
 
         // Handle URL-only case

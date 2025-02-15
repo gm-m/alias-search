@@ -22,11 +22,8 @@ export type Alias = {
 
 export type ActiveAlias = { "name": string; defaultAlias: SearchEngine['defaultAlias']; } & AliasProperties;
 
-export interface SearchPayload {
-    aliases: ParsedAlias[];
-    aliasDescriptions: string[];
-    searchQuery: string;
-    categories: string[];
+export interface ParsedAlias extends TabOptions {
+    alias: string;
 }
 
 export interface TabOptions {
@@ -34,8 +31,8 @@ export interface TabOptions {
     newTab: boolean;
 }
 
-export interface ParsedAlias extends TabOptions {
-    alias: string;
+export interface ParsedCategory extends TabOptions {
+    category: string;
 }
 
 export interface UrlWithOptions extends TabOptions {
@@ -50,4 +47,11 @@ export interface PopupElements {
     container: HTMLDivElement;
     userInput: HTMLInputElement;
     activeAlias: HTMLSpanElement;
+}
+
+export interface SearchPayload {
+    aliases: ParsedAlias[];
+    aliasDescriptions: string[];
+    searchQuery: string;
+    categories: ParsedCategory[];
 }
