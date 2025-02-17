@@ -10,19 +10,51 @@ const SETTINGS_MAP: Record<string, keyof TabOptions> = {
 export class SearchHandler {
     constructor(private state: SearchState) { }
 
-    private getTabOptions(word: string): TabOptions {
-        const settings: TabOptions = {
-            incognito: this.state.getSearchEngines().incognitoMode,
-            newTab: this.state.getSearchEngines().targetWindow === '_blank'
+    private getTabOptions(word: string, aliasProps?: AliasProperties): TabOptions {
+        const searchEngines = this.state.getSearchEngines();
+
+        // Start with the base settings from alias or global
+        const baseSettings: TabOptions = {
+            incognito: aliasProps?.settings?.incognitoMode ?? searchEngines.incognitoMode,
+            newTab: aliasProps?.settings?.newTab ?? (searchEngines.targetWindow === '_blank')
         };
 
-        for (const [index, char] of [...word].entries()) {
+        // Override with any command-line settings from the word parameter
+        const commandSettings = this.extractCommandSettings(word);
+
+        return { ...baseSettings, ...commandSettings };
+    }
+
+    /**
+     * Process the command-line options contained in the word.
+     * A setting symbol is looked up in SETTINGS_MAP to find the associated key in TabOptions.
+     * If the symbol is repeated (double character), the setting is disabled, otherwise enabled.
+     *
+     * @param word The input word containing command-line options.
+     * @returns A Partial<TabOptions> with command-line overrides.
+     */
+    private extractCommandSettings(word: string): Partial<TabOptions> {
+        const commandSettings: Partial<TabOptions> = {};
+        let index = 0;
+
+        while (index < word.length) {
+            const char = word[index];
             const settingKey = SETTINGS_MAP[char];
-            // Sets the property to true if the following character is different, and false if it is the same.
-            if (settingKey) settings[settingKey] = word[index + 1] !== char;
+
+            // If the character doesn't represent a setting key, break early
+            if (!settingKey) {
+                break;
+            }
+
+            // Check if next character is the same, indicating disabling the setting
+            const isDouble = index + 1 < word.length && word[index + 1] === char;
+            commandSettings[settingKey] = !isDouble;
+
+            // Advance one or two characters based on whether a double was found
+            index += isDouble ? 2 : 1;
         }
 
-        return settings;
+        return commandSettings;
     }
 
     parseAliases(inputText: string): SearchPayload {
@@ -35,16 +67,16 @@ export class SearchHandler {
         let searchQuery = '';
 
         for (const word of words) {
-            const tabOptions = this.getTabOptions(word);
             const cleanWord = word.replace(/^[!@]+/, '');
-
             const alias = searchEngines.alias[cleanWord];
+
             if (alias) {
                 if (!searchEngines.enableMultiAlias && aliases.length) {
                     searchQuery = words.slice(words.indexOf(word)).join(' ');
                     break;
                 }
 
+                const tabOptions = this.getTabOptions(word, alias);
                 aliases.push({ alias: cleanWord, ...tabOptions });
                 aliasDescriptions.add(alias.searchEngine);
                 continue;
@@ -53,7 +85,7 @@ export class SearchHandler {
             // Check categories
             const matchingCategories = Object.values(searchEngines.alias)
                 .filter(a => a.categories?.includes(cleanWord))
-                .length > 0 ? [{ category: cleanWord, ...tabOptions }] : [];
+                .length > 0 ? [{ category: cleanWord, ...this.getTabOptions(word) }] : [];
 
             if (matchingCategories.length) {
                 categories.push(...matchingCategories);

@@ -44,12 +44,18 @@ class Options {
             return;
         }
 
+        const aliasSettings = {
+            incognitoMode: DomHelpers.isChecked('alias-settings-incognito-mode'),
+            newTab: DomHelpers.isChecked('alias-settings-new-tab')
+        };
+
         try {
             const newAlias = await this.searchEngineService.createAlias(
                 aliasInput.value,
                 urlInput.value,
                 searchEngineInput.value,
-                categoriesInput?.value || ''
+                categoriesInput?.value || '',
+                aliasSettings
             );
 
             if (newAlias.type === "multi") {

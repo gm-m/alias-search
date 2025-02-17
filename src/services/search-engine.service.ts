@@ -19,7 +19,13 @@ export class SearchEngineService {
         await browser.storage.sync.set({ "searchEnginesObj": this.searchEngines });
     }
 
-    async createAlias(aliasName: string, aliasUrl: string, searchEngineName: string, categories: string): Promise<AliasProperties> {
+    async createAlias(
+        aliasName: string, 
+        aliasUrl: string, 
+        searchEngineName: string, 
+        categories: string,
+        settings?: AliasProperties['settings']
+    ): Promise<AliasProperties> {
         if (!aliasName || !aliasUrl) {
             throw new Error("Fill all data");
         }
@@ -30,7 +36,8 @@ export class SearchEngineService {
         const newAlias = {
             searchEngine: searchEngineName,
             type: aliasType,
-            categories: aliasCategories
+            categories: aliasCategories,
+            settings
         } as AliasProperties;
 
         if (this.searchEngines.alias[aliasName]) {
@@ -52,12 +59,26 @@ export class SearchEngineService {
         return newAlias;
     }
 
-    async updateAlias(name: string, url: string, isDefaultAsias: boolean): Promise<void> {
+    async updateAlias(
+        name: string, 
+        url: string, 
+        isDefaultAsias: boolean,
+        settings?: AliasProperties['settings']
+    ): Promise<void> {
         if (!this.searchEngines.alias[name]) return;
 
         const aliasType = this.getAliasType(url);
-        this.searchEngines.alias[name].url = url;
+        
+        if (aliasType === "placeholder") {
+            this.searchEngines.alias[name].placeholderUrl = url;
+            this.searchEngines.alias[name].url = '';
+        } else {
+            this.searchEngines.alias[name].url = url;
+            this.searchEngines.alias[name].placeholderUrl = null;
+        }
+
         this.searchEngines.alias[name].type = aliasType;
+        this.searchEngines.alias[name].settings = settings;
         this.handleUpdateDefaultAlias(isDefaultAsias, name);
 
         await browser.storage.sync.set({ "searchEnginesObj": this.searchEngines });

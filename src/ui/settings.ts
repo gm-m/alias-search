@@ -49,7 +49,7 @@ export class SettingsUI {
     }
 
     addAliasToDom(searchEnginesObj: ActiveAlias): void {
-        const { name, searchEngine, url, type, defaultAlias, categories } = searchEnginesObj;
+        const { name, searchEngine, url, type, defaultAlias, categories, settings } = searchEnginesObj;
         const activeAliasUrls = this.getActiveAliasUrls(searchEnginesObj);
 
         const aliasDiv = document.createElement('div');
@@ -60,20 +60,30 @@ export class SettingsUI {
         <input id="alias-name" class="name form-control" name="${name}" value="${name}" autocomplete="off" readonly>
         <input id="alias-url" autocomplete="off" class="value form-control" name="${url}" value="${activeAliasUrls}">
         <input id="alias-category" autocomplete="off" class="value form-control" value="${categories || 'No categories'}" readonly>
-        <div class="form-check form-switch form-switch-xl d-flex">
-            <div class="col-4">
+        <div class="form-check form-switch form-switch-xl">
+            <div class="col">
                 <input id="alias-placeholder" class="form-check-input" type="checkbox" disabled>
                 <label class="form-check-label" for="alias-placeholder">Placeholder</label>
             </div>
 
-            <div class="col-4">
+            <div class="col">
                 <input id="alias-link" class="form-check-input" type="checkbox" disabled>
                 <label class="form-check-label" for="alias-link">Direct Link</label>
             </div>
 
-            <div class="col-4">
+            <div class="col">
                 <input id="default-alias" class="form-check-input" type="checkbox">
                 <label class="form-check-label" for="default-alias">Default Alias</label>
+            </div>
+
+            <div class="col">
+                <input id="alias-incognito-${name}" class="form-check-input" type="checkbox" ${settings?.incognitoMode ? 'checked' : ''}>
+                <label class="form-check-label" for="alias-incognito-${name}">Always open in Incognito mode</label>
+            </div>
+
+            <div class="col">
+                <input id="alias-new-tab-${name}" class="form-check-input" type="checkbox" ${settings?.newTab ? 'checked' : ''}>
+                <label class="form-check-label" for="alias-new-tab-${name}">Always open in new tab</label>
             </div>
         </div>
 
@@ -133,14 +143,26 @@ export class SettingsUI {
         }
     }
 
-    private async handleUpdateAlias(div: HTMLElement): Promise<void> {
-        const nameInput = div.querySelector('#alias-name') as HTMLInputElement;
-        const urlInput = div.querySelector('#alias-url') as HTMLInputElement;
-        const defaultAliasInput = div.querySelector('#default-alias') as HTMLInputElement;
+    private async handleUpdateAlias(aliasDiv: HTMLElement): Promise<void> {
+        const aliasName = aliasDiv.querySelector('#alias-name') as HTMLInputElement;
+        const urlInput = aliasDiv.querySelector('#alias-url') as HTMLInputElement;
+        const defaultAliasCheckbox = aliasDiv.querySelector('#default-alias') as HTMLInputElement;
+        const incognitoCheckbox = aliasDiv.querySelector(`#alias-incognito-${aliasName}`) as HTMLInputElement;
+        const newTabCheckbox = aliasDiv.querySelector(`#alias-new-tab-${aliasName}`) as HTMLInputElement;
 
-        if (nameInput && urlInput) {
-            await this.searchEngineService.updateAlias(nameInput.value, urlInput.value, defaultAliasInput.checked);
-        }
+        if (!urlInput?.value) return;
+
+        const settings = {
+            incognitoMode: incognitoCheckbox?.checked,
+            newTab: newTabCheckbox?.checked
+        };
+
+        await this.searchEngineService.updateAlias(
+            aliasName,
+            urlInput.value,
+            defaultAliasCheckbox?.checked || false,
+            settings
+        );
     }
 
     private async handleDeleteAlias(name: string): Promise<void> {

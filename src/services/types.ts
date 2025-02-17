@@ -14,6 +14,10 @@ export type AliasProperties = {
     searchEngine: string;
     placeholderUrl: string | null;
     url: string;
+    settings?: {
+        incognitoMode?: boolean;
+        newTab?: boolean;
+    };
 };
 
 export type Alias = {

@@ -11,6 +11,10 @@ The Alias Search Extension is a browser extension designed to enhance your web s
 - **Add New Aliases**: Easily create new search aliases by specifying the search engine name, alias, and the corresponding URL.
 - **Edit Existing Aliases**: Update the URL or other details of your existing aliases.
 - **Delete Aliases**: Remove any aliases that are no longer needed.
+- **Per-Alias Settings**: Configure individual settings for each alias:
+  - Set an alias to always open in incognito mode, overriding global settings
+  - Set an alias to always open in a new tab, overriding global settings
+  - These settings can be modified directly from the Active aliases list
 
 ### Global Settings
 
