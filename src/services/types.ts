@@ -13,7 +13,7 @@ export type AliasProperties = {
     type: "placeholder" | "link" | "multi";
     searchEngine: string;
     placeholderUrl: string | null;
-    url: string;
+    url: string | null;
     settings?: {
         incognitoMode?: boolean;
         newTab?: boolean;

@@ -58,15 +58,11 @@ class Options {
                 aliasSettings
             );
 
-            if (newAlias.type === "multi") {
-                this.settingsUI.updateMultiAliasCheckboxes(aliasInput.value);
-            } else {
-                this.settingsUI.addAliasToDom({
-                    name: aliasInput.value,
-                    defaultAlias: '',
-                    ...newAlias,
-                });
-            }
+	    this.settingsUI.addAliasToDom({
+		    name: aliasInput.value,
+		    defaultAlias: '',
+		    ...newAlias,
+	    });
 
             this.settingsUI.updateUIVisibility(true);
         } catch (error: any) {

@@ -38,39 +38,29 @@ export class SettingsUI {
         }
     }
 
-    private getActiveAliasUrls(alias: ActiveAlias): string | null {
-        if (alias.type === "placeholder") {
-            return alias.placeholderUrl;
-        } else if (alias.type === "link") {
-            return alias.url;
-        } else {
-            return `${alias.url} | ${alias.placeholderUrl}`;
-        }
-    }
-
     addAliasToDom(searchEnginesObj: ActiveAlias): void {
-        const { name, searchEngine, url, type, defaultAlias, categories, settings } = searchEnginesObj;
-        const activeAliasUrls = this.getActiveAliasUrls(searchEnginesObj);
+        const { name, searchEngine, url, placeholderUrl, defaultAlias, categories, settings } = searchEnginesObj;
 
         const aliasDiv = document.createElement('div');
         aliasDiv.id = name;
         aliasDiv.className = "active-alias d-flex flex-column col-4 gap-2 mb-5";
         aliasDiv.innerHTML = `
-        <input class="extended-name form-control" name="${searchEngine}" value="${searchEngine}" autocomplete="off" readonly>
+        <label for="alias-search-engine">Name</label>
+        <input id="alias-search-engine" class="extended-name form-control" name="${searchEngine}" value="${searchEngine}" autocomplete="off" readonly>
+
+        <label for="alias-name">Alias</label>
         <input id="alias-name" class="name form-control" name="${name}" value="${name}" autocomplete="off" readonly>
-        <input id="alias-url" autocomplete="off" class="value form-control" name="${url}" value="${activeAliasUrls}">
+
+        <label for="alias-direct-link">Direct Link</label>
+        <input id="alias-direct-link" autocomplete="off" class="value form-control" name="${url}" value="${url || ''}" ${!url ? 'readonly' : ''}>
+
+        <label for="alias-placeholder-url">Placeholder URL</label>
+        <input id="alias-placeholder-url" autocomplete="off" class="value form-control" name="${placeholderUrl}" value="${placeholderUrl || ''}" ${!placeholderUrl ? 'readonly' : ''}>
+
+        <label for="alias-category">Categories</label>
         <input id="alias-category" autocomplete="off" class="value form-control" value="${categories || 'No categories'}" readonly>
+
         <div class="form-check form-switch form-switch-xl">
-            <div class="col">
-                <input id="alias-placeholder" class="form-check-input" type="checkbox" disabled>
-                <label class="form-check-label" for="alias-placeholder">Placeholder</label>
-            </div>
-
-            <div class="col">
-                <input id="alias-link" class="form-check-input" type="checkbox" disabled>
-                <label class="form-check-label" for="alias-link">Direct Link</label>
-            </div>
-
             <div class="col">
                 <input id="default-alias" class="form-check-input" type="checkbox">
                 <label class="form-check-label" for="default-alias">Default Alias</label>
@@ -94,7 +84,7 @@ export class SettingsUI {
         `;
 
         this.attachAliasEventListeners(aliasDiv, name);
-        this.updateAliasCheckboxes(aliasDiv, type, getIndexOfExactMatch(name, defaultAlias) !== null);
+        this.updateAliasCheckboxes(aliasDiv, getIndexOfExactMatch(name, defaultAlias) !== null);
 
         const divContainer = document.getElementById('display-content');
         if (divContainer) divContainer.appendChild(aliasDiv);
@@ -113,53 +103,29 @@ export class SettingsUI {
         }
     }
 
-    private updateAliasCheckboxes(aliasDiv: HTMLElement, type: ActiveAlias['type'], isDefaultAlias: boolean): void {
-        const placeholder = aliasDiv.querySelector('#alias-placeholder') as HTMLInputElement;
-        const directLink = aliasDiv.querySelector('#alias-link') as HTMLInputElement;
+    private updateAliasCheckboxes(aliasDiv: HTMLElement, isDefaultAlias: boolean): void {
         const defaultAliasDomEl = aliasDiv.querySelector('#default-alias') as HTMLInputElement;
-
-        if (placeholder) {
-            placeholder.checked = type === "placeholder" || type === "multi";
-        }
-
-        if (directLink) {
-            directLink.checked = type === "link" || type === "multi";
-        }
 
         if (defaultAliasDomEl) {
             defaultAliasDomEl.checked = isDefaultAlias;
         }
     }
 
-    // Method for updating checkboxes when converting to multi-alias
-    updateMultiAliasCheckboxes(aliasName: string): void {
-        const aliasDiv = document.getElementById(aliasName);
-        if (aliasDiv) {
-            aliasDiv.querySelectorAll('.form-check input').forEach(checkbox => {
-                if (checkbox instanceof HTMLInputElement) {
-                    checkbox.checked = true;
-                }
-            });
-        }
-    }
-
     private async handleUpdateAlias(aliasDiv: HTMLElement): Promise<void> {
         const aliasName = aliasDiv.querySelector('#alias-name') as HTMLInputElement;
-        const urlInput = aliasDiv.querySelector('#alias-url') as HTMLInputElement;
+        const directLink = aliasDiv.querySelector('#alias-direct-link') as HTMLInputElement;
+        const placeholderUrl = aliasDiv.querySelector('#alias-placeholder-url') as HTMLInputElement;
         const defaultAliasCheckbox = aliasDiv.querySelector('#default-alias') as HTMLInputElement;
-        const incognitoCheckbox = aliasDiv.querySelector(`#alias-incognito-${aliasName}`) as HTMLInputElement;
-        const newTabCheckbox = aliasDiv.querySelector(`#alias-new-tab-${aliasName}`) as HTMLInputElement;
-
-        if (!urlInput?.value) return;
 
         const settings = {
-            incognitoMode: incognitoCheckbox?.checked,
-            newTab: newTabCheckbox?.checked
+            incognitoMode: DomHelpers.isChecked(`alias-incognito-${aliasName.value}`),
+            newTab: DomHelpers.isChecked(`alias-new-tab-${aliasName.value}`)
         };
 
         await this.searchEngineService.updateAlias(
-            aliasName,
-            urlInput.value,
+            aliasName.value,
+            directLink.value,
+            placeholderUrl.value,
             defaultAliasCheckbox?.checked || false,
             settings
         );

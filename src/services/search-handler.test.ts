@@ -156,7 +156,6 @@ describe('SearchHandler', () => {
 
       // Test incognito mode
       const resultIncognito = searchHandler.parseAliases('!search test query');
-      console.log("Cat: ", resultIncognito.categories);
       expect(resultIncognito.categories).toHaveLength(1);
       expect(resultIncognito.categories[0]).toEqual({
         category: 'search',

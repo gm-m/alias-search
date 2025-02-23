@@ -60,25 +60,19 @@ export class SearchEngineService {
     }
 
     async updateAlias(
-        name: string, 
-        url: string, 
+        name: string,
+        directLink: string,
+        placeholderUrl: string,
         isDefaultAsias: boolean,
         settings?: AliasProperties['settings']
     ): Promise<void> {
         if (!this.searchEngines.alias[name]) return;
 
-        const aliasType = this.getAliasType(url);
-        
-        if (aliasType === "placeholder") {
-            this.searchEngines.alias[name].placeholderUrl = url;
-            this.searchEngines.alias[name].url = '';
-        } else {
-            this.searchEngines.alias[name].url = url;
-            this.searchEngines.alias[name].placeholderUrl = null;
-        }
-
-        this.searchEngines.alias[name].type = aliasType;
+	this.searchEngines.alias[name].placeholderUrl = placeholderUrl || null;
+	this.searchEngines.alias[name].url = directLink || null;
         this.searchEngines.alias[name].settings = settings;
+        const aliasType = this.getAliasType(placeholderUrl);
+        this.searchEngines.alias[name].type = aliasType;
         this.handleUpdateDefaultAlias(isDefaultAsias, name);
 
         await browser.storage.sync.set({ "searchEnginesObj": this.searchEngines });
