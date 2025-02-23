@@ -25,6 +25,9 @@ class Options {
         document.getElementById("btn-reset")?.addEventListener("click", () => this.handleClearData());
         this.initializeImportListener();
         document.getElementById("btn-export-json")?.addEventListener("click", () => this.handleExport());
+
+        document.getElementById("btn-active-aliases")?.addEventListener("click", () => this.handleTabChange(true));
+        document.getElementById("btn-active-categories")?.addEventListener("click", () => this.handleTabChange(false));
     }
 
     private initializeImportListener(): void {
@@ -82,6 +85,18 @@ class Options {
         await this.searchEngineService.saveSettings(settings);
     }
 
+    private handleTabChange(showActiveAliases: boolean): void {
+	    if(showActiveAliases){
+		    document.getElementById('display-content')?.classList.remove('d-none');
+		    document.getElementById('display-categories')?.classList.add('d-none');
+	    } else {
+		    document.getElementById('display-content')?.classList.add('d-none');
+		    document.getElementById('display-categories')?.classList.remove('d-none');
+	    }
+
+	    document.getElementById('btn-active-aliases')?.classList.toggle('active');
+	    document.getElementById('btn-active-categories')?.classList.toggle('active');
+    }
     private async handleClearData(): Promise<void> {
         if (confirm("Do you really want to delete all aliases?")) {
             await this.searchEngineService.clearAllAliases();

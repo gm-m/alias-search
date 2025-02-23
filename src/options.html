@@ -121,21 +121,37 @@
     <hr class="my-5">
 
     <div>
-        <h3>Active aliases</h3>
-
-        <div class="mt-3">
-            <span id="display-empty">Empty</span>
-            <div id="display-content" class="row"></div>
+        <div class="mb-5">
+            <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a id="btn-active-aliases" class="nav-link active" role="button">Active aliases</a>
+            </li>
+            <li class="nav-item">
+                <a id="btn-active-categories" class="nav-link" role="button">Active categories</a>
+            </li>
+            </ul>
         </div>
 
-        <div class="d-flex col gap-5 mt-5 mb-5">
-            <button id="btn-reset" class="btn btn-secondary w-50">Reset</button>
-            <label id="btn-import-json" class="btn btn-secondary w-50" for="upload-json">
-                Import JSON
-                <input type="file" id="upload-json" class="d-none" accept=".json">
-            </label>
-            <button id="btn-export-json" class="btn btn-secondary w-50">Export JSON</button>
+        <!-- Active aliases -->
+        <div id="display-empty-aliases">
+            <p>No aliases found.</p>
         </div>
+        <div id="display-content" class="row"></div>
+
+        <!-- Active categories -->
+        <div id="display-empty-categories">
+            <p>No categories found.</p>
+        </div>
+        <div id="display-categories" class="d-none row"></div>
+    </div>
+
+    <div class="d-flex col gap-5 mt-5 mb-5">
+        <button id="btn-reset" class="btn btn-secondary w-50">Reset</button>
+        <label id="btn-import-json" class="btn btn-secondary w-50" for="upload-json">
+            Import JSON
+            <input type="file" id="upload-json" class="d-none" accept=".json">
+        </label>
+        <button id="btn-export-json" class="btn btn-secondary w-50">Export JSON</button>
     </div>
 </body>
 

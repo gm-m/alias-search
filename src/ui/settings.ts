@@ -13,6 +13,7 @@ export class SettingsUI {
     displayData(content: SearchEngine): void {
         this.displaySettings(content);
         this.displayActiveAliases(content);
+        this.displayActiveCategories(content);
     }
 
     displaySettings(searchEngines: SearchEngine): void {
@@ -23,7 +24,7 @@ export class SettingsUI {
         DomHelpers.setCheckboxValue('tab-settings-prefill-url', searchEngines.prefillUrl);
     }
 
-    displayActiveAliases(content: SearchEngine): void {
+    private displayActiveAliases(content: SearchEngine): void {
         if (this.searchEngineService.hasAliases()) {
             for (const key in content.alias) {
                 this.addAliasToDom({
@@ -35,6 +36,38 @@ export class SettingsUI {
             this.updateUIVisibility(true);
         } else {
             this.updateUIVisibility(false);
+        }
+    }
+
+    private displayActiveCategories(content: SearchEngine): void {
+        const displayCategories = document.getElementById('display-categories');
+        if (!displayCategories) return;
+
+        // Get all unique categories
+        const categories = new Set<string>();
+        for (const alias of Object.values(content.alias)) {
+            if (alias.categories) {
+                alias.categories.forEach(cat => categories.add(cat));
+            }
+        }
+
+        displayCategories.innerHTML = '';
+        if (categories.size > 0) {
+            for (const category of categories) {
+                // Get all aliases in this category
+                const categoryAliases = Object.entries(content.alias)
+                    .filter(([_, alias]) => alias.categories?.includes(category))
+                    .map(([name, alias]) => ({
+                        name,
+                        settings: alias.settings,
+                        searchEngine: alias.searchEngine
+                    }));
+
+                this.addCategoryToDom(category, categoryAliases);
+            }
+            DomHelpers.showElement('display-empty-categories', false);
+        } else {
+            DomHelpers.showElement('display-empty-categories', true);
         }
     }
 
@@ -90,6 +123,58 @@ export class SettingsUI {
         if (divContainer) divContainer.appendChild(aliasDiv);
     }
 
+    addCategoryToDom(category: string, aliases: { name: string; settings: any; searchEngine: string }[]): void {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.id = `category-${category}`;
+        categoryDiv.className = "active-category d-flex flex-column col-4 gap-2 mb-5";
+
+        // Calculate combined settings
+        const combinedSettings = aliases.reduce(
+            (acc, alias) => ({
+                incognitoMode: acc.incognitoMode || alias.settings?.incognitoMode || false,
+                newTab: acc.newTab || alias.settings?.newTab || false
+            }),
+            { incognitoMode: false, newTab: false }
+        );
+
+        categoryDiv.innerHTML = `
+            <div class="category-header">
+                <h5>${category}</h5>
+            </div>
+            <div class="category-content" role="region" aria-labelledby="category-header-${category}">
+                <div class="included-aliases">
+                    ${aliases.map(alias => `
+                        <div class="alias-item">
+                            <span class="badge bg-primary me-2">${alias.name}</span>
+                            <small class="text-muted">${alias.searchEngine}</small>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="settings-group mt-3">
+                    <div class="form-check form-switch">
+                        <input id="category-incognito-${category}" class="form-check-input" type="checkbox" ${combinedSettings.incognitoMode ? 'checked' : ''} disabled>
+                        <label class="form-check-label" for="category-incognito-${category}">
+                            Opens in Incognito mode
+                            <small class="text-muted">(inherited from aliases)</small>
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input id="category-new-tab-${category}" class="form-check-input" type="checkbox" ${combinedSettings.newTab ? 'checked' : ''} disabled>
+                        <label class="form-check-label" for="category-new-tab-${category}">
+                            Opens in new tab
+                            <small class="text-muted">(inherited from aliases)</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const divContainer = document.getElementById('display-categories');
+        if (divContainer) divContainer.appendChild(categoryDiv);
+    }
+
     private attachAliasEventListeners(aliasDiv: HTMLElement, name: string): void {
         const updateButton = aliasDiv.querySelector(`#update-${name}`);
         const deleteButton = aliasDiv.querySelector(`#delete-${name}`);
@@ -138,7 +223,7 @@ export class SettingsUI {
         this.updateUIVisibility(this.searchEngineService.hasAliases());
     }
 
-    updateUIVisibility(hasAliases: boolean): void {
+    private updateUIVisibility(hasAliases: boolean): void {
         if (!hasAliases) {
             const displayContent = document.getElementById('display-content');
             if (displayContent) displayContent.innerHTML = '';
