@@ -6,6 +6,12 @@ export type SearchEngine = {
     openAsUrl: boolean;
     prefillUrl: boolean;
     targetWindow: "_blank" | "_self";
+    categorySettings?: {
+        [category: string]: {
+            incognitoMode?: boolean;
+            newTab?: boolean;
+        };
+    };
 };
 
 export type AliasProperties = {

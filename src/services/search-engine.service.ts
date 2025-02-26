@@ -107,6 +107,25 @@ export class SearchEngineService {
         return Boolean(this.searchEngines?.alias && Object.keys(this.searchEngines.alias).length);
     }
 
+    getSearchEngines(): SearchEngine {
+        return this.searchEngines;
+    }
+
+    async updateCategorySettings(
+        category: string,
+        settings: {
+            incognitoMode?: boolean;
+            newTab?: boolean;
+        }
+    ): Promise<void> {
+        if (!this.searchEngines.categorySettings) {
+            this.searchEngines.categorySettings = {};
+        }
+
+        this.searchEngines.categorySettings[category] = settings;
+        await browser.storage.sync.set({ "searchEnginesObj": this.searchEngines });
+    }
+
     private getAliasType(url: string) {
         return url.includes("%s") ? "placeholder" : "link";
     }

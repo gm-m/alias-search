@@ -16,6 +16,16 @@ The Alias Search Extension is a browser extension designed to enhance your web s
   - Set an alias to always open in a new tab, overriding global settings
   - These settings can be modified directly from the Active aliases list
 
+### Category Management
+
+- **Organize with Categories**: Group related aliases into categories for better organization.
+- **Per-Category Settings**: Configure settings for entire categories:
+  - Set a category to always open in incognito mode
+  - Set a category to always open in a new tab
+  - These settings apply to all aliases within the category
+- **Category View**: View all aliases within a category and their associated settings.
+- **Inherited Settings**: See which settings are inherited from individual aliases within a category.
+
 ### Global Settings
 
 - **Open in New Tab**: Choose whether to open search results in a new tab or the current tab.

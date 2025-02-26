@@ -58,6 +58,23 @@ export class SearchHandler {
         return commandSettings;
     }
 
+    private getCategoryTabOptions(word: string, category: string): TabOptions {
+        const searchEngines = this.state.getSearchEngines();
+        const categorySettings = searchEngines.categorySettings?.[category];
+
+        // Start with the base settings from category settings or global
+        const baseSettings: TabOptions = {
+            incognito: categorySettings?.incognitoMode ?? searchEngines.incognitoMode,
+            // Only use category-specific newTab setting when it's explicitly true, otherwise use global setting
+            newTab: categorySettings?.newTab === true ? true : (searchEngines.targetWindow === '_blank')
+        };
+
+        // Override with any command-line settings from the word parameter
+        const commandSettings = this.extractCommandSettings(word);
+
+        return { ...baseSettings, ...commandSettings };
+    }
+
     parseAliases(inputText: string): SearchPayload {
         const words = inputText.trim().split(' ').filter(Boolean);
         const aliases: ParsedAlias[] = [];
@@ -86,7 +103,7 @@ export class SearchHandler {
             // Check categories
             const matchingCategories = Object.values(searchEngines.alias)
                 .filter(a => a.categories?.includes(cleanWord))
-                .length > 0 ? [{ category: cleanWord, ...this.getTabOptions(word) }] : [];
+                .length > 0 ? [{ category: cleanWord, ...this.getCategoryTabOptions(word, cleanWord) }] : [];
 
             if (matchingCategories.length) {
                 categories.push(...matchingCategories);
@@ -133,10 +150,15 @@ export class SearchHandler {
                 .filter(alias => alias.categories?.some(category => categories.some(c => c.category === category)))
                 .forEach(alias => {
                     const matchingCategory = categories.find(c => alias.categories!.includes(c.category))!;
+                    
+                    // Get category settings if they exist
+                    const categorySettings = searchEngines.categorySettings?.[matchingCategory.category];
+                    
+                    // Apply category settings if they exist, otherwise use the settings from the parsed category
                     urls.add({
                         url: this.getTargetUrl(alias, query),
-                        incognito: matchingCategory.incognito,
-                        newTab: matchingCategory.newTab
+                        incognito: categorySettings?.incognitoMode ?? matchingCategory.incognito,
+                        newTab: categorySettings?.newTab === true ? true : matchingCategory.newTab
                     });
                 });
         }

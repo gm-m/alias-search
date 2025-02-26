@@ -8,7 +8,8 @@ export const getDefaultSearchEngines = (): SearchEngine => {
         incognitoMode: false,
         enableMultiAlias: false,
         defaultAlias: '',
-        prefillUrl: false
+        prefillUrl: false,
+        categorySettings: {}
     };
 };
 

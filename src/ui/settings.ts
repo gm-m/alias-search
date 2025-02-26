@@ -78,19 +78,19 @@ export class SettingsUI {
         aliasDiv.id = name;
         aliasDiv.className = "active-alias d-flex flex-column col-4 gap-2 mb-5";
         aliasDiv.innerHTML = `
-        <label for="alias-search-engine">Name</label>
+        <label for="alias-search-engine" class="fw-bold">Name</label>
         <input id="alias-search-engine" class="extended-name form-control" name="${searchEngine}" value="${searchEngine}" autocomplete="off" readonly>
 
-        <label for="alias-name">Alias</label>
+        <label for="alias-name" class="fw-bold">Alias</label>
         <input id="alias-name" class="name form-control" name="${name}" value="${name}" autocomplete="off" readonly>
 
-        <label for="alias-direct-link">Direct Link</label>
+        <label for="alias-direct-link" class="fw-bold">Direct Link</label>
         <input id="alias-direct-link" autocomplete="off" class="value form-control" name="${url}" value="${url || ''}" ${!url ? 'readonly' : ''}>
 
-        <label for="alias-placeholder-url">Placeholder URL</label>
+        <label for="alias-placeholder-url" class="fw-bold">Placeholder URL</label>
         <input id="alias-placeholder-url" autocomplete="off" class="value form-control" name="${placeholderUrl}" value="${placeholderUrl || ''}" ${!placeholderUrl ? 'readonly' : ''}>
 
-        <label for="alias-category">Categories</label>
+        <label for="alias-category" class="fw-bold">Categories</label>
         <input id="alias-category" autocomplete="off" class="value form-control" value="${categories || 'No categories'}" readonly>
 
         <div class="form-check form-switch form-switch-xl">
@@ -128,7 +128,11 @@ export class SettingsUI {
         categoryDiv.id = `category-${category}`;
         categoryDiv.className = "active-category d-flex flex-column col-4 gap-2 mb-5";
 
-        // Calculate combined settings
+        // Get current search engines to check for existing category settings
+        const searchEngines = this.searchEngineService.getSearchEngines();
+        const categorySettings = searchEngines.categorySettings?.[category];
+
+        // Calculate combined settings from aliases (for display purposes)
         const combinedSettings = aliases.reduce(
             (acc, alias) => ({
                 incognitoMode: acc.incognitoMode || alias.settings?.incognitoMode || false,
@@ -153,24 +157,45 @@ export class SettingsUI {
                 </div>
 
                 <div class="settings-group mt-3">
-                    <div class="form-check form-switch">
-                        <input id="category-incognito-${category}" class="form-check-input" type="checkbox" ${combinedSettings.incognitoMode ? 'checked' : ''} disabled>
-                        <label class="form-check-label" for="category-incognito-${category}">
+                    <h6 class="mb-2">Inherited Settings (Read-only)</h6>
+                    <div class="form-check form-switch mb-3">
+                        <input id="category-inherited-incognito-${category}" class="form-check-input" type="checkbox" ${combinedSettings.incognitoMode ? 'checked' : ''} disabled>
+                        <label class="form-check-label" for="category-inherited-incognito-${category}">
                             Opens in Incognito mode
                             <small class="text-muted">(inherited from aliases)</small>
                         </label>
                     </div>
 
-                    <div class="form-check form-switch">
-                        <input id="category-new-tab-${category}" class="form-check-input" type="checkbox" ${combinedSettings.newTab ? 'checked' : ''} disabled>
-                        <label class="form-check-label" for="category-new-tab-${category}">
+                    <div class="form-check form-switch mb-4">
+                        <input id="category-inherited-new-tab-${category}" class="form-check-input" type="checkbox" ${combinedSettings.newTab ? 'checked' : ''} disabled>
+                        <label class="form-check-label" for="category-inherited-new-tab-${category}">
                             Opens in new tab
                             <small class="text-muted">(inherited from aliases)</small>
                         </label>
                     </div>
+
+                    <h6 class="mb-2">Category Settings</h6>
+                    <div class="form-check form-switch mb-3">
+                        <input id="category-incognito-${category}" class="form-check-input" type="checkbox" ${categorySettings?.incognitoMode ? 'checked' : ''}>
+                        <label class="form-check-label" for="category-incognito-${category}">
+                            Always open in Incognito mode
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input id="category-new-tab-${category}" class="form-check-input" type="checkbox" ${categorySettings?.newTab ? 'checked' : ''}>
+                        <label class="form-check-label" for="category-new-tab-${category}">
+                            Always open in new tab
+                        </label>
+                    </div>
+
+                    <button id="update-category-${category}" class="btn btn-secondary">Update Category Settings</button>
                 </div>
             </div>
         `;
+
+        // Add event listener for the update button
+        this.attachCategoryEventListeners(categoryDiv, category);
 
         const divContainer = document.getElementById('display-categories');
         if (divContainer) divContainer.appendChild(categoryDiv);
@@ -232,5 +257,44 @@ export class SettingsUI {
 
         DomHelpers.showElement('display-empty', !hasAliases);
         DomHelpers.showElement('btn-reset', hasAliases);
+    }
+
+    private attachCategoryEventListeners(categoryDiv: HTMLElement, category: string): void {
+        const updateButton = categoryDiv.querySelector(`#update-category-${category}`);
+        
+        if (updateButton) {
+            updateButton.addEventListener("click", () => this.handleUpdateCategorySettings(categoryDiv, category));
+        }
+    }
+
+    private async handleUpdateCategorySettings(categoryDiv: HTMLElement, category: string): Promise<void> {
+        const incognitoMode = DomHelpers.isChecked(`category-incognito-${category}`);
+        const newTab = DomHelpers.isChecked(`category-new-tab-${category}`);
+
+        try {
+            await this.searchEngineService.updateCategorySettings(category, {
+                incognitoMode,
+                newTab
+            });
+            
+            // Show success message
+            const updateButton = categoryDiv.querySelector(`#update-category-${category}`) as HTMLButtonElement;
+            if (updateButton) {
+                const originalText = updateButton.textContent;
+                updateButton.textContent = "Settings Saved!";
+                updateButton.classList.remove("btn-secondary");
+                updateButton.classList.add("btn-success");
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    updateButton.textContent = originalText;
+                    updateButton.classList.remove("btn-success");
+                    updateButton.classList.add("btn-secondary");
+                }, 2000);
+            }
+        } catch (error) {
+            console.error("Failed to update category settings:", error);
+            alert("Failed to update category settings. Please try again.");
+        }
     }
 }
