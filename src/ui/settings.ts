@@ -132,7 +132,8 @@ export class SettingsUI {
         const combinedSettings = aliases.reduce(
             (acc, alias) => ({
                 incognitoMode: acc.incognitoMode || alias.settings?.incognitoMode || false,
-                newTab: acc.newTab || alias.settings?.newTab || false
+                // Only consider newTab as true if explicitly set to true
+                newTab: acc.newTab || alias.settings?.newTab === true
             }),
             { incognitoMode: false, newTab: false }
         );

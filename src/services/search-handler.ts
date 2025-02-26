@@ -16,7 +16,8 @@ export class SearchHandler {
         // Start with the base settings from alias or global
         const baseSettings: TabOptions = {
             incognito: aliasProps?.settings?.incognitoMode ?? searchEngines.incognitoMode,
-            newTab: aliasProps?.settings?.newTab ?? (searchEngines.targetWindow === '_blank')
+            // Only use alias-specific newTab setting when it's explicitly true, otherwise use global setting
+            newTab: aliasProps?.settings?.newTab === true ? true : (searchEngines.targetWindow === '_blank')
         };
 
         // Override with any command-line settings from the word parameter
