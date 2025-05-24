@@ -32,7 +32,7 @@ export class PopupUI {
   static createPopupElement(searchEngines: SearchEngine): PopupElements {
     const container = document.createElement('div');
     container.attachShadow({ mode: 'open' });
-    container.style.cssText = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; z-index: 999999;";
+    container.style.cssText = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50%; z-index: 999999;";
 
     const popup = document.createElement('div');
     popup.style.cssText = 'border-radius: .5rem;';

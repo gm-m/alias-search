@@ -7,8 +7,14 @@ export class SearchEngineService {
 
     async loadSavedData(): Promise<SearchEngine> {
         const result = await browser.storage.sync.get("searchEnginesObj");
-        if (result?.searchEnginesObj) {
-            this.searchEngines = result.searchEnginesObj;
+        // Check if searchEnginesObj exists and is not an empty object (by checking for a known property like 'alias')
+        if (result?.searchEnginesObj && typeof result.searchEnginesObj === 'object' && 'alias' in result.searchEnginesObj) {
+            this.searchEngines = result.searchEnginesObj as SearchEngine; // Cast to SearchEngine after check
+        } else {
+            // If no valid saved data, ensure this.searchEngines is the default.
+            // This might already be handled by the initial declaration, but being explicit is safe.
+            // If getDefaultSearchEngines() is expensive, this could be omitted if the initial value is sufficient.
+            this.searchEngines = getDefaultSearchEngines(); 
         }
 
         return this.searchEngines;
@@ -123,6 +129,18 @@ export class SearchEngineService {
         }
 
         this.searchEngines.categorySettings[category] = settings;
+        await browser.storage.sync.set({ "searchEnginesObj": this.searchEngines });
+    }
+
+    async updateIncognitoRegex(newRegex: string): Promise<void> {
+        // Ensure data is loaded if not already (though usually it would be by prior calls)
+        // await this.loadSavedData(); // Consider if this is strictly necessary if service is long-lived
+        
+        if (newRegex.trim() === '') {
+            delete this.searchEngines.incognitoRegex; // Remove the property if the string is empty
+        } else {
+            this.searchEngines.incognitoRegex = newRegex.trim();
+        }
         await browser.storage.sync.set({ "searchEnginesObj": this.searchEngines });
     }
 

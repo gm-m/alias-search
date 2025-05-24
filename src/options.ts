@@ -79,10 +79,12 @@ class Options {
             openAsUrl: DomHelpers.isChecked('tab-settings-open-as-url'),
             incognitoMode: DomHelpers.isChecked('tab-settings-open-incognito-mode'),
             enableMultiAlias: DomHelpers.isChecked('tab-settings-enable-multi-alias'),
-            prefillUrl: DomHelpers.isChecked('tab-settings-prefill-url')
+            prefillUrl: DomHelpers.isChecked('tab-settings-prefill-url'),
+            incognitoRegex: (document.getElementById('incognito-regex-input') as HTMLInputElement)?.value.trim() || undefined
         };
 
         await this.searchEngineService.saveSettings(settings);
+        alert('Settings saved!');
     }
 
     private handleTabChange(showActiveAliases: boolean): void {

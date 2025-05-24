@@ -13,17 +13,19 @@ export class SearchHandler {
     private getTabOptions(word: string, aliasProps?: AliasProperties): TabOptions {
         const searchEngines = this.state.getSearchEngines();
 
-        // Start with the base settings from alias or global
-        const baseSettings: TabOptions = {
-            incognito: aliasProps?.settings?.incognitoMode ?? searchEngines.incognitoMode,
-            // Only use alias-specific newTab setting when it's explicitly true, otherwise use global setting
-            newTab: aliasProps?.settings?.newTab === true ? true : (searchEngines.targetWindow === '_blank')
-        };
+        // Base settings from alias or global defaults
+        const baseIncognito = aliasProps?.settings?.incognitoMode ?? searchEngines.incognitoMode;
+        const baseNewTab = (aliasProps?.settings?.newTab === true) || (searchEngines.targetWindow === '_blank');
 
-        // Override with any command-line settings from the word parameter
+        // Command-line overrides
         const commandSettings = this.extractCommandSettings(word);
 
-        return { ...baseSettings, ...commandSettings };
+        return {
+            // Initial incognito value: command override or base. Regex logic will be applied later in handleSearch.
+            incognito: commandSettings.incognito ?? baseIncognito,
+            newTab: commandSettings.newTab ?? baseNewTab,
+            commandLineIncognito: commandSettings.incognito // Captures explicit '!', '!!', or undefined
+        };
     }
 
     /**
@@ -62,17 +64,19 @@ export class SearchHandler {
         const searchEngines = this.state.getSearchEngines();
         const categorySettings = searchEngines.categorySettings?.[category];
 
-        // Start with the base settings from category settings or global
-        const baseSettings: TabOptions = {
-            incognito: categorySettings?.incognitoMode ?? searchEngines.incognitoMode,
-            // Only use category-specific newTab setting when it's explicitly true, otherwise use global setting
-            newTab: categorySettings?.newTab === true ? true : (searchEngines.targetWindow === '_blank')
-        };
+        // Base settings from category-specific settings or global defaults
+        const baseIncognito = categorySettings?.incognitoMode ?? searchEngines.incognitoMode;
+        const baseNewTab = (categorySettings?.newTab === true) || (searchEngines.targetWindow === '_blank');
 
-        // Override with any command-line settings from the word parameter
+        // Command-line overrides (if 'word' for category contains '!' or '!!')
         const commandSettings = this.extractCommandSettings(word);
 
-        return { ...baseSettings, ...commandSettings };
+        return {
+            // Initial incognito value: command override or base. Regex logic will be applied later in handleSearch.
+            incognito: commandSettings.incognito ?? baseIncognito,
+            newTab: commandSettings.newTab ?? baseNewTab,
+            commandLineIncognito: commandSettings.incognito // Captures explicit '!', '!!', or undefined
+        };
     }
 
     parseAliases(inputText: string): SearchPayload {
@@ -119,62 +123,123 @@ export class SearchHandler {
     }
 
     private getTargetUrl(alias: AliasProperties, searchQuery: string): string {
-        if (alias.type === "link") return alias.url;
-        if (!searchQuery && alias.type !== "placeholder") return alias.url;
+        if (alias.type === "link") {
+            // A 'link' type alias should always have a URL.
+            return alias.url!; 
+        }
+        // If there's no search query and the alias is not a placeholder type (i.e., it's a 'link' or 'multi'),
+        // it should navigate to its base URL.
+        if (!searchQuery && alias.type !== "placeholder") {
+            return alias.url!;
+        }
 
+        // For placeholder types, or any type when a search query is present and previous conditions didn't match.
         return alias.placeholderUrl!.replace('%s', encodeURIComponent(searchQuery));
     }
 
     handleSearch(searchQuery: string): void {
-        const { aliases, searchQuery: query, categories } = this.state.getCachedPayload();
+        const { aliases: parsedAliases, searchQuery: query, categories: parsedCategories } = this.state.getCachedPayload();
         const searchEngines = this.state.getSearchEngines();
 
-        const urls = new Set<UrlWithOptions>();
-
-        // Handle aliases and categories
-        const defaultTabOptions = {
-            incognito: searchEngines.incognitoMode,
-            newTab: searchEngines.targetWindow === '_blank'
-        };
+        // Intermediate structure to hold URL info before final decision
+        interface IntermediateUrlInfo {
+            url: string;
+            newTab: boolean;
+            initialIncognito: boolean; // Incognito value from getTabOptions (pre-regex)
+            commandLineIncognito?: boolean; // From getTabOptions (true for '!', false for '!!', undefined otherwise)
+        }
+        const intermediateUrlInfos: IntermediateUrlInfo[] = [];
 
         // Process direct aliases
-        aliases.forEach(({ alias: aliasName, ...tabOptions }) => {
-            const alias = searchEngines.alias[aliasName];
-            if (alias.type === "placeholder" && !query) return;
-            urls.add({ url: this.getTargetUrl(alias, query), ...tabOptions });
+        parsedAliases.forEach(parsedAlias => {
+            const aliasDetails = searchEngines.alias[parsedAlias.alias];
+            // Ensure aliasDetails exists and handle placeholder logic
+            if (!aliasDetails || (aliasDetails.type === "placeholder" && !query)) return;
+            
+            intermediateUrlInfos.push({
+                url: this.getTargetUrl(aliasDetails, query),
+                newTab: parsedAlias.newTab,
+                initialIncognito: parsedAlias.incognito, // This is the incognito value from getTabOptions
+                commandLineIncognito: parsedAlias.commandLineIncognito
+            });
         });
 
         // Process categories
-        if (categories.length) {
+        if (parsedCategories.length) {
             Object.values(searchEngines.alias)
-                .filter(alias => alias.categories?.some(category => categories.some(c => c.category === category)))
-                .forEach(alias => {
-                    const matchingCategory = categories.find(c => alias.categories!.includes(c.category))!;
-                    
-                    // Get category settings if they exist
-                    const categorySettings = searchEngines.categorySettings?.[matchingCategory.category];
-                    
-                    // Apply category settings if they exist, otherwise use the settings from the parsed category
-                    urls.add({
-                        url: this.getTargetUrl(alias, query),
-                        incognito: categorySettings?.incognitoMode ?? matchingCategory.incognito,
-                        newTab: categorySettings?.newTab === true ? true : matchingCategory.newTab
+                .filter(aliasDetails => aliasDetails.categories?.some(categoryName => parsedCategories.some(pc => pc.category === categoryName)))
+                .forEach(aliasDetails => {
+                    // Find the specific ParsedCategory object that led to this alias being included
+                    // This is important to get the correct commandLineIncognito if categories had prefixes
+                    const matchingParsedCategory = parsedCategories.find(pc => aliasDetails.categories!.includes(pc.category));
+                    if (!matchingParsedCategory) return; // Should not happen if filter is correct
+
+                    // Ensure aliasDetails exists and handle placeholder logic
+                    if (aliasDetails.type === "placeholder" && !query) return;
+
+                    intermediateUrlInfos.push({
+                        url: this.getTargetUrl(aliasDetails, query),
+                        newTab: matchingParsedCategory.newTab, // Use newTab from the parsed category rule
+                        initialIncognito: matchingParsedCategory.incognito, // Use incognito from the parsed category rule
+                        commandLineIncognito: matchingParsedCategory.commandLineIncognito
                     });
                 });
         }
 
         // Handle URL-only case
-        if (urls.size === 0 && searchEngines.openAsUrl) {
-            urls.add({
-                url: searchQuery.match(/^https?:\/\//i) ? searchQuery : `https://${searchQuery}`,
-                ...defaultTabOptions
+        // For URL-only, commandLineIncognito will be undefined as no '!' or '!!' applies directly to it.
+        if (intermediateUrlInfos.length === 0 && searchEngines.openAsUrl && searchQuery) {
+            const urlInput = searchQuery.match(/^https?:\/\//i) ? searchQuery : `https://${searchQuery}`;
+            intermediateUrlInfos.push({
+                url: urlInput,
+                newTab: searchEngines.targetWindow === '_blank',
+                initialIncognito: searchEngines.incognitoMode, // Global default incognito
+                commandLineIncognito: undefined 
             });
         }
 
-        if (urls.size) {
+        // Determine if global incognito regex matches
+        let globalRegexMatches = false;
+        const globalIncognitoRegexPattern = searchEngines.incognitoRegex;
+        if (globalIncognitoRegexPattern && query) { 
+            try {
+                const regex = new RegExp(globalIncognitoRegexPattern);
+                if (regex.test(query)) {
+                    globalRegexMatches = true;
+                }
+            } catch (e) {
+                console.error("Invalid incognito regex pattern in settings:", globalIncognitoRegexPattern, e);
+            }
+        }
+
+        const finalUrlsToOpen = new Set<UrlWithOptions>();
+
+        for (const item of intermediateUrlInfos) {
+            let determinedIncognito = item.initialIncognito; // Start with the pre-regex value
+
+            // Apply priority logic
+            if (item.commandLineIncognito === false) { // Priority 1: '!!' (Force non-incognito)
+                determinedIncognito = false;
+            } else if (item.commandLineIncognito === true) { // Priority 2: '!' (Force incognito)
+                determinedIncognito = true;
+            } else { // No '!' or '!!' for this item (commandLineIncognito is undefined)
+                if (globalRegexMatches) { // Priority 3: Global Regex Match
+                    determinedIncognito = true;
+                }
+                // Else, determinedIncognito remains item.initialIncognito (Priorities 4, 5, 6)
+            }
+            
+            finalUrlsToOpen.add({
+                url: item.url,
+                incognito: determinedIncognito,
+                newTab: item.newTab
+            });
+        }
+
+        if (finalUrlsToOpen.size) {
             browser.runtime.sendMessage({
                 action: "openTabs",
-                urls: Array.from(urls)
+                urls: Array.from(finalUrlsToOpen)
             });
         }
     }

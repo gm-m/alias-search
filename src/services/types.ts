@@ -12,6 +12,7 @@ export type SearchEngine = {
             newTab?: boolean;
         };
     };
+    incognitoRegex?: string;
 };
 
 export type AliasProperties = {
@@ -39,6 +40,7 @@ export interface ParsedAlias extends TabOptions {
 export interface TabOptions {
     incognito: boolean;
     newTab: boolean;
+    commandLineIncognito?: boolean; // true if '!', false if '!!', undefined otherwise
 }
 
 export interface ParsedCategory extends TabOptions {

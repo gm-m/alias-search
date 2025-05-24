@@ -33,6 +33,9 @@ The Alias Search Extension is a browser extension designed to enhance your web s
 - **Incognito Mode**: Enable the option to open searches in incognito mode.
 - **Multi Alias Support**: Allow multiple aliases to be triggered simultaneously.
 - **Prefill Search Bar with Current Tab URL**: Option to automatically fill the search bar with the URL of the current tab.
+- **Pattern-Based Incognito**: Define a global regular expression (regex) in the settings. If a search query (excluding the alias itself) matches this regex, the search will automatically open in incognito mode.
+  - **Priority**: This regex match is evaluated as part of a specific priority order to determine the final incognito status (see "Setting Priority" below).
+  - **Error Handling**: Invalid regex patterns are ignored, and an error is logged to the console.
 
 ### Custom Syntax for Overriding Global Settings
 
@@ -41,6 +44,19 @@ The Alias Search Extension is a browser extension designed to enhance your web s
   - `!!` before an alias to explicitly disable incognito mode.
   - `@` before an alias to open it in a new tab.
   - `@@` before an alias to explicitly disable opening in a new tab.
+
+### Setting Priority
+
+The decision to apply any setting (such as incognito mode, new tab, etc.) is determined by the following priority order:
+
+1. **Explicit Disable (`!!` or `@@`)**: If `!!` (for incognito) or `@@` (for new tab) is used before an alias (e.g., `alias!! query` or `alias@@ query`), the setting will be explicitly disabled for that item, overriding all other configurations.
+2. **Explicit Enable (`!` or `@`)**: If `!` (for incognito) or `@` (for new tab) is used before an alias (e.g., `alias! query` or `alias@ query`), the setting will be explicitly enabled for that item, overriding other configurations.
+3. **Global Regex Match**: If no explicit modifier is used, and a global regex is defined for a setting (e.g., `incognitoRegex`), and the search query (the part after the alias) matches this regex, the setting will be applied.
+4. **Alias-Specific Setting**: If none of the above apply, the setting defined for the specific alias is used.
+5. **Category-Specific Setting**: If the search is triggered via a category and none of the above apply, the category's setting is used.
+6. **Global Default Setting**: Finally, if no other rule applies, the global default setting is used.
+
+This priority order applies to all configurable settings.
 
 ### Import/Export Functionality
 

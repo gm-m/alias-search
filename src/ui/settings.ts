@@ -22,6 +22,12 @@ export class SettingsUI {
         DomHelpers.setCheckboxValue('tab-settings-open-incognito-mode', searchEngines.incognitoMode);
         DomHelpers.setCheckboxValue('tab-settings-enable-multi-alias', searchEngines.enableMultiAlias);
         DomHelpers.setCheckboxValue('tab-settings-prefill-url', searchEngines.prefillUrl);
+
+        // Populate the incognito regex input field
+        const incognitoRegexInput = document.getElementById('incognito-regex-input') as HTMLInputElement | null;
+        if (incognitoRegexInput) {
+            incognitoRegexInput.value = searchEngines.incognitoRegex || '';
+        }
     }
 
     private displayActiveAliases(content: SearchEngine): void {
@@ -249,7 +255,7 @@ export class SettingsUI {
         this.updateUIVisibility(this.searchEngineService.hasAliases());
     }
 
-    private updateUIVisibility(hasAliases: boolean): void {
+    public updateUIVisibility(hasAliases: boolean): void {
         if (!hasAliases) {
             const displayContent = document.getElementById('display-content');
             if (displayContent) displayContent.innerHTML = '';
