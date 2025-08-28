@@ -86,9 +86,8 @@ This Extension is compatible with both Chromium-based browsers (e.g., Google Chr
 ### For Firefox
 
 1. Clone the repository.
-2. Run `npm i && npm run buildFirefox`.
-3. Open your browser's extension management page by typing `about:debugging` in the address bar.
-4. Click on "This Firefox" (in newer versions of Firefox) or "Load Temporary Add-on" (in older versions).
-5. Select the `manifest.json` file from the folder containing the extension files.
-
-**Note**: In Firefox, the extension will be loaded temporarily and will be removed when you restart the browser. To load the extension permanently, you will need to create a new directory for the extension and add the `manifest.json` file to it, then load the extension using the "Load Temporary Add-on" option.
+2. Run `npm install && npm run buildFirefox`.
+3. Zip all files in the build output directory (`./dist`).
+4. Type `about:config` in the address bar and set `xpinstall.signatures.required` to `false`.
+5. Go to the Extensions page, click the gear icon and select "Install Add-on From File...".
+6. In the file picker, navigate to `./dist` and select the zip file.
