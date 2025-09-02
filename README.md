@@ -37,6 +37,21 @@ The Alias Search Extension is a browser extension designed to enhance your web s
   - **Priority**: This regex match is evaluated as part of a specific priority order to determine the final incognito status (see "Setting Priority" below).
   - **Error Handling**: Invalid regex patterns are ignored, and an error is logged to the console.
 
+### Multi-Query Syntax
+
+Perform multiple searches with a single command using bracket notation:
+
+- **Single Alias, Multiple Queries**: `g[javascript..python..react]`
+  - Searches for "javascript", "python", and "react" using the `g` alias
+- **Multiple Aliases**: `g[react] y[tutorial]`
+  - Searches for "react" on Google (`g`) and "tutorial" on YouTube (`y`)
+- **Combined Syntax**: `g[react..vue] y[tutorial..guide]`
+  - Searches for "react" and "vue" on Google, "tutorial" and "guide" on YouTube
+- **With Additional Text**: `g[react..vue] tutorial 2024`
+  - Searches for "react tutorial 2024" and "vue tutorial 2024" on Google
+- **With Command Modifiers**: `!g[secure..private] search`
+  - Opens incognito searches for "secure search" and "private search" on Google
+
 ### Custom Syntax for Overriding Global Settings
 
 - **Override Global Settings**: Use special symbols to override global settings for individual aliases.
@@ -49,14 +64,14 @@ The Alias Search Extension is a browser extension designed to enhance your web s
 
 The decision to apply any setting (such as incognito mode, new tab, etc.) is determined by the following priority order:
 
-1. **Explicit Disable (`!!` or `@@`)**: If `!!` (for incognito) or `@@` (for new tab) is used before an alias (e.g., `alias!! query` or `alias@@ query`), the setting will be explicitly disabled for that item, overriding all other configurations.
-2. **Explicit Enable (`!` or `@`)**: If `!` (for incognito) or `@` (for new tab) is used before an alias (e.g., `alias! query` or `alias@ query`), the setting will be explicitly enabled for that item, overriding other configurations.
+1. **Explicit Disable (`!!` or `@@`)**: If `!!` (for incognito) or `@@` (for new tab) is used before an alias (e.g., `!!alias query` or `@@alias query`), the setting will be explicitly disabled for that item, overriding all other configurations.
+2. **Explicit Enable (`!` or `@`)**: If `!` (for incognito) or `@` (for new tab) is used before an alias (e.g., `!alias query` or `@alias query`), the setting will be explicitly enabled for that item, overriding other configurations.
 3. **Global Regex Match**: If no explicit modifier is used, and a global regex is defined for a setting (e.g., `incognitoRegex`), and the search query (the part after the alias) matches this regex, the setting will be applied.
 4. **Alias-Specific Setting**: If none of the above apply, the setting defined for the specific alias is used.
 5. **Category-Specific Setting**: If the search is triggered via a category and none of the above apply, the category's setting is used.
 6. **Global Default Setting**: Finally, if no other rule applies, the global default setting is used.
 
-This priority order applies to all configurable settings.
+This priority order applies to all configurable settings and works seamlessly with the multi-query syntax.
 
 ### Import/Export Functionality
 
@@ -68,10 +83,41 @@ This priority order applies to all configurable settings.
 - **Dynamic Search**: As you type in the search input, the extension dynamically suggests matching aliases and displays relevant information.
 - **Category Support**: Organize aliases into categories for easier management and retrieval.
 - **Default Alias**: Option to set one or more aliases as default, allowing for quick access and streamlined searches based on frequently used terms.
+- **Multi-Query Execution**: Execute multiple related searches simultaneously using the bracket syntax.
 
 ### Compatibility
 
 This Extension is compatible with both Chromium-based browsers (e.g., Google Chrome, Microsoft Edge) and Firefox.
+
+## Usage Examples
+
+### Basic Searches
+```
+g javascript                   # Search for "javascript" on Google
+y react tutorial               # Search for "react tutorial" on YouTube
+g y typescript                 # Search for "typescript" on both Google and Youtube
+```
+
+### Command Modifiers
+```
+!g private search              # Search for "private search" on Google in incognito mode
+@y tutorial                    # Search for "tutorial" on YouTube in a new tab
+!!g public info                # Search for "public info" on Google, explicitly not in incognito
+```
+
+### Multi-Query Syntax
+```
+g[javascript..python..go]                    # Search for "javascript", "python" and "go" on Google
+g[frontend..backend] developer jobs          # Search for frontend and backend developer jobs
+!g[react..angular] changelog                 # Search for "react changelog" and "angular changelog" in incognito
+g[react] y[react tutorial]                   # Search for "react" on Google and "react tutorial" on YouTube  
+```
+
+### Categories
+```
+dev typescript                 # Search all aliases in the "dev" category for "typescript"
+!social latest news           # Search all aliases in "social" category for "latest news" in incognito
+```
 
 ## Getting Started
 
@@ -81,7 +127,7 @@ This Extension is compatible with both Chromium-based browsers (e.g., Google Chr
 2. Run `npm i && npm run build`.
 3. Open your browser's extension management page (`chrome://extensions`).
 4. Enable "Developer mode" (usually found in the top right corner).
-5. Click on "Load unpacked" and select the folder containing the extension files.
+5. Click on "Load unpacked" and select the `./dist` folder.
 
 ### For Firefox
 

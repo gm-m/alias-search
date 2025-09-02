@@ -79,6 +79,49 @@ export class SearchHandler {
         };
     }
 
+    /**
+     * Parses multi-query syntax like g[keyword1..keyword2] or multiple expressions like g[react] y[tutorial]
+     * Returns an array of individual queries to process
+     */
+    private parseMultiQuery(inputText: string): string[] {
+        // Check for multiple bracket expressions: g[react] y[tutorial]
+        const multipleBracketRegex = /([!@]*\w+)\[([^\]]+)\]/g;
+        const matches = Array.from(inputText.matchAll(multipleBracketRegex));
+        
+        if (matches.length > 1) {
+            // Handle multiple bracket expressions
+            const allQueries: string[] = [];
+            for (const match of matches) {
+                const [, aliasWithModifiers, queriesString] = match;
+                const queries = queriesString.split('..').map(q => q.trim()).filter(Boolean);
+                queries.forEach(query => {
+                    allQueries.push(`${aliasWithModifiers} ${query}`);
+                });
+            }
+            return allQueries;
+        }
+        
+        // Handle single bracket expression: g[keyword1..keyword2] optional_text
+        const singleBracketRegex = /^([!@]*\w+)\[([^\]]+)\](.*)$/;
+        const singleMatch = inputText.match(singleBracketRegex);
+        
+        if (!singleMatch) {
+            return [inputText]; // No multi-query syntax found, return original
+        }
+
+        const [, aliasWithModifiers, queriesString, remainingText] = singleMatch;
+        const queries = queriesString.split('..').map(q => q.trim()).filter(Boolean);
+        
+        // Generate individual search strings
+        return queries.map(query => {
+            const parts = [aliasWithModifiers, query];
+            if (remainingText.trim()) {
+                parts.push(remainingText.trim());
+            }
+            return parts.join(' ');
+        });
+    }
+
     parseAliases(inputText: string): SearchPayload {
         const words = inputText.trim().split(' ').filter(Boolean);
         const aliases: ParsedAlias[] = [];
@@ -137,16 +180,28 @@ export class SearchHandler {
         return alias.placeholderUrl!.replace('%s', encodeURIComponent(searchQuery));
     }
 
-    handleSearch(searchQuery: string): void {
-        const { aliases: parsedAliases, searchQuery: query, categories: parsedCategories } = this.state.getCachedPayload();
+    /**
+     * Processes a single search command and returns the URLs to open
+     */
+    private processSingleSearch(inputText: string): UrlWithOptions[] {
+        // Cache the current payload and temporarily parse this specific input
+        const originalPayload = this.state.getCachedPayload();
+        
+        // Parse this specific input
+        const payload = this.parseAliases(inputText);
+        
+        // Temporarily set the payload for processing
+        this.state.setCachedPayload(payload);
+        
+        const { aliases: parsedAliases, searchQuery: query, categories: parsedCategories } = payload;
         const searchEngines = this.state.getSearchEngines();
 
         // Intermediate structure to hold URL info before final decision
         interface IntermediateUrlInfo {
             url: string;
             newTab: boolean;
-            initialIncognito: boolean; // Incognito value from getTabOptions (pre-regex)
-            commandLineIncognito?: boolean; // From getTabOptions (true for '!', false for '!!', undefined otherwise)
+            initialIncognito: boolean;
+            commandLineIncognito?: boolean;
         }
         const intermediateUrlInfos: IntermediateUrlInfo[] = [];
 
@@ -159,7 +214,7 @@ export class SearchHandler {
             intermediateUrlInfos.push({
                 url: this.getTargetUrl(aliasDetails, query),
                 newTab: parsedAlias.newTab,
-                initialIncognito: parsedAlias.incognito, // This is the incognito value from getTabOptions
+                initialIncognito: parsedAlias.incognito,
                 commandLineIncognito: parsedAlias.commandLineIncognito
             });
         });
@@ -169,31 +224,27 @@ export class SearchHandler {
             Object.values(searchEngines.alias)
                 .filter(aliasDetails => aliasDetails.categories?.some(categoryName => parsedCategories.some(pc => pc.category === categoryName)))
                 .forEach(aliasDetails => {
-                    // Find the specific ParsedCategory object that led to this alias being included
-                    // This is important to get the correct commandLineIncognito if categories had prefixes
                     const matchingParsedCategory = parsedCategories.find(pc => aliasDetails.categories!.includes(pc.category));
-                    if (!matchingParsedCategory) return; // Should not happen if filter is correct
+                    if (!matchingParsedCategory) return;
 
-                    // Ensure aliasDetails exists and handle placeholder logic
                     if (aliasDetails.type === "placeholder" && !query) return;
 
                     intermediateUrlInfos.push({
                         url: this.getTargetUrl(aliasDetails, query),
-                        newTab: matchingParsedCategory.newTab, // Use newTab from the parsed category rule
-                        initialIncognito: matchingParsedCategory.incognito, // Use incognito from the parsed category rule
+                        newTab: matchingParsedCategory.newTab,
+                        initialIncognito: matchingParsedCategory.incognito,
                         commandLineIncognito: matchingParsedCategory.commandLineIncognito
                     });
                 });
         }
 
         // Handle URL-only case
-        // For URL-only, commandLineIncognito will be undefined as no '!' or '!!' applies directly to it.
-        if (intermediateUrlInfos.length === 0 && searchEngines.openAsUrl && searchQuery) {
-            const urlInput = searchQuery.match(/^https?:\/\//i) ? searchQuery : `https://${searchQuery}`;
+        if (intermediateUrlInfos.length === 0 && searchEngines.openAsUrl && inputText) {
+            const urlInput = inputText.match(/^https?:\/\//i) ? inputText : `https://${inputText}`;
             intermediateUrlInfos.push({
                 url: urlInput,
                 newTab: searchEngines.targetWindow === '_blank',
-                initialIncognito: searchEngines.incognitoMode, // Global default incognito
+                initialIncognito: searchEngines.incognitoMode,
                 commandLineIncognito: undefined 
             });
         }
@@ -212,34 +263,159 @@ export class SearchHandler {
             }
         }
 
-        const finalUrlsToOpen = new Set<UrlWithOptions>();
+        const urlsToOpen: UrlWithOptions[] = [];
 
         for (const item of intermediateUrlInfos) {
-            let determinedIncognito = item.initialIncognito; // Start with the pre-regex value
+            let determinedIncognito = item.initialIncognito;
 
             // Apply priority logic
-            if (item.commandLineIncognito === false) { // Priority 1: '!!' (Force non-incognito)
+            if (item.commandLineIncognito === false) {
                 determinedIncognito = false;
-            } else if (item.commandLineIncognito === true) { // Priority 2: '!' (Force incognito)
+            } else if (item.commandLineIncognito === true) {
                 determinedIncognito = true;
-            } else { // No '!' or '!!' for this item (commandLineIncognito is undefined)
-                if (globalRegexMatches) { // Priority 3: Global Regex Match
+            } else {
+                if (globalRegexMatches) {
                     determinedIncognito = true;
                 }
-                // Else, determinedIncognito remains item.initialIncognito (Priorities 4, 5, 6)
             }
             
-            finalUrlsToOpen.add({
+            urlsToOpen.push({
                 url: item.url,
                 incognito: determinedIncognito,
                 newTab: item.newTab
             });
         }
 
-        if (finalUrlsToOpen.size) {
+        // Restore original payload
+        this.state.setCachedPayload(originalPayload);
+        
+        return urlsToOpen;
+    }
+
+    handleSearch(searchQuery: string): void {
+        // Parse multi-query syntax
+        const individualQueries = this.parseMultiQuery(searchQuery);
+        
+        // If only one query (no multi-query syntax), use original logic
+        if (individualQueries.length === 1) {
+            const { aliases: parsedAliases, searchQuery: query, categories: parsedCategories } = this.state.getCachedPayload();
+            const searchEngines = this.state.getSearchEngines();
+
+            // ... (original handleSearch logic for single query)
+            interface IntermediateUrlInfo {
+                url: string;
+                newTab: boolean;
+                initialIncognito: boolean;
+                commandLineIncognito?: boolean;
+            }
+            const intermediateUrlInfos: IntermediateUrlInfo[] = [];
+
+            // Process direct aliases
+            parsedAliases.forEach(parsedAlias => {
+                const aliasDetails = searchEngines.alias[parsedAlias.alias];
+                if (!aliasDetails || (aliasDetails.type === "placeholder" && !query)) return;
+                
+                intermediateUrlInfos.push({
+                    url: this.getTargetUrl(aliasDetails, query),
+                    newTab: parsedAlias.newTab,
+                    initialIncognito: parsedAlias.incognito,
+                    commandLineIncognito: parsedAlias.commandLineIncognito
+                });
+            });
+
+            // Process categories
+            if (parsedCategories.length) {
+                Object.values(searchEngines.alias)
+                    .filter(aliasDetails => aliasDetails.categories?.some(categoryName => parsedCategories.some(pc => pc.category === categoryName)))
+                    .forEach(aliasDetails => {
+                        const matchingParsedCategory = parsedCategories.find(pc => aliasDetails.categories!.includes(pc.category));
+                        if (!matchingParsedCategory) return;
+
+                        if (aliasDetails.type === "placeholder" && !query) return;
+
+                        intermediateUrlInfos.push({
+                            url: this.getTargetUrl(aliasDetails, query),
+                            newTab: matchingParsedCategory.newTab,
+                            initialIncognito: matchingParsedCategory.incognito,
+                            commandLineIncognito: matchingParsedCategory.commandLineIncognito
+                        });
+                    });
+            }
+
+            // Handle URL-only case
+            if (intermediateUrlInfos.length === 0 && searchEngines.openAsUrl && searchQuery) {
+                const urlInput = searchQuery.match(/^https?:\/\//i) ? searchQuery : `https://${searchQuery}`;
+                intermediateUrlInfos.push({
+                    url: urlInput,
+                    newTab: searchEngines.targetWindow === '_blank',
+                    initialIncognito: searchEngines.incognitoMode,
+                    commandLineIncognito: undefined 
+                });
+            }
+
+            // Determine if global incognito regex matches
+            let globalRegexMatches = false;
+            const globalIncognitoRegexPattern = searchEngines.incognitoRegex;
+            if (globalIncognitoRegexPattern && query) { 
+                try {
+                    const regex = new RegExp(globalIncognitoRegexPattern);
+                    if (regex.test(query)) {
+                        globalRegexMatches = true;
+                    }
+                } catch (e) {
+                    console.error("Invalid incognito regex pattern in settings:", globalIncognitoRegexPattern, e);
+                }
+            }
+
+            const finalUrlsToOpen = new Set<UrlWithOptions>();
+
+            for (const item of intermediateUrlInfos) {
+                let determinedIncognito = item.initialIncognito;
+
+                if (item.commandLineIncognito === false) {
+                    determinedIncognito = false;
+                } else if (item.commandLineIncognito === true) {
+                    determinedIncognito = true;
+                } else {
+                    if (globalRegexMatches) {
+                        determinedIncognito = true;
+                    }
+                }
+                
+                finalUrlsToOpen.add({
+                    url: item.url,
+                    incognito: determinedIncognito,
+                    newTab: item.newTab
+                });
+            }
+
+            if (finalUrlsToOpen.size) {
+                browser.runtime.sendMessage({
+                    action: "openTabs",
+                    urls: Array.from(finalUrlsToOpen)
+                });
+            }
+            return;
+        }
+
+        // Handle multiple queries
+        const allUrlsToOpen: UrlWithOptions[] = [];
+        
+        for (const queryText of individualQueries) {
+            const urlsForQuery = this.processSingleSearch(queryText);
+            allUrlsToOpen.push(...urlsForQuery);
+        }
+
+        // Remove duplicates based on URL
+        const uniqueUrls = new Map<string, UrlWithOptions>();
+        allUrlsToOpen.forEach(urlObj => {
+            uniqueUrls.set(urlObj.url, urlObj);
+        });
+
+        if (uniqueUrls.size > 0) {
             browser.runtime.sendMessage({
                 action: "openTabs",
-                urls: Array.from(finalUrlsToOpen)
+                urls: Array.from(uniqueUrls.values())
             });
         }
     }
